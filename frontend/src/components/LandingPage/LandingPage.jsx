@@ -94,7 +94,7 @@ export default function LandingPage({ onEnter }) {
                             viewport={{ once: true, margin: "-100px" }}
                         >
                             <div className="glass-mockup feature-mockup">
-                                <img src="/assets/voice_tutor.png" alt="Voice Tutor Interface" />
+                                <img src="/assets/landing_voice.webp" alt="Voice Tutor Interface Animation" />
                             </div>
                         </motion.div>
                     </div>
@@ -121,7 +121,7 @@ export default function LandingPage({ onEnter }) {
                             viewport={{ once: true, margin: "-100px" }}
                         >
                             <div className="glass-mockup feature-mockup">
-                                <img src="/assets/visuals.png" alt="Visual Explanations" />
+                                <img src="/assets/landing_visuals.webp" alt="Visual Explanations Animation" />
                             </div>
                         </motion.div>
                     </div>
@@ -148,7 +148,7 @@ export default function LandingPage({ onEnter }) {
                             viewport={{ once: true, margin: "-100px" }}
                         >
                             <div className="glass-mockup feature-mockup">
-                                <img src="/assets/assessment.png" alt="Assessment Center" />
+                                <img src="/assets/landing_assessment.webp" alt="Assessment Center Animation" />
                             </div>
                         </motion.div>
                     </div>

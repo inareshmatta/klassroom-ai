@@ -19,9 +19,10 @@
   grid-template-columns: 280px 1fr 300px;
   gap: var(--panel-gap);
   padding: 0 var(--panel-gap) var(--panel-gap);
+  height: 100vh;
+  overflow: hidden;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* Panel base */
