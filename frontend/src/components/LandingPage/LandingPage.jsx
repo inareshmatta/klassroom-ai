@@ -1,12 +1,8 @@
 import React from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import './LandingPage.css';
 
 export default function LandingPage({ onEnter }) {
-    const { scrollYProgress } = useScroll();
-    const yHero = useTransform(scrollYProgress, [0, 1], [0, 300]);
-    const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-
     return (
         <div className="landing-container">
             {/* Background Orbs Elements */}
@@ -34,7 +30,6 @@ export default function LandingPage({ onEnter }) {
                 <section className="hero-section">
                     <motion.div
                         className="hero-content"
-                        style={{ y: yHero, opacity: opacityHero }}
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}

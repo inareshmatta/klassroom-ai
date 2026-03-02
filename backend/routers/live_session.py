@@ -651,9 +651,11 @@ Be conversational, use the student's name if they give it, and make learning fun
                                 turns={"parts": [{"text": f"[Context update] Student is now on: {data.get('text', '')}"}]}
                             )
                         elif data.get("type") == "client_interruption":
+                            # Send a clear message that the user interrupted without closing the turn.
+                            # This naturally breaks Gemini out of its speaking loop while continuing to listen.
                             await session.send_client_content(
                                 turns={"parts": [{"text": "\n"}]},
-                                turn_complete=True
+                                turn_complete=False
                             )
 
             except WebSocketDisconnect:

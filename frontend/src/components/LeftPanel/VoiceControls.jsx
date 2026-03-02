@@ -91,7 +91,7 @@ export default function VoiceControls({
             processorRef.current = proc
 
             let loudFrames = 0
-            const VAD_THRESHOLD = 0.03 // Adjust threshold based on typical mic noise
+            const VAD_THRESHOLD = 0.015 // Lowered threshold to ensure barge-in works even for quiet speaking
 
             proc.onaudioprocess = (e) => {
                 if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
