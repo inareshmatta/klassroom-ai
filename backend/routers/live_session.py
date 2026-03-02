@@ -521,20 +521,34 @@ When the session starts, briefly say something like "Hi there! I'm KlassroomAI. 
             ]
         }]
 
+        # 1. Lean Handshake: Connect with minimal config to optimize speed
         live_config = {
             "response_modalities": ["AUDIO"],
-            "system_instruction": system_prompt,
-            "tools": live_tools,
             "output_audio_transcription": {},
             "input_audio_transcription": {},
-            "thinking_config": {"thinking_budget": 256},
         }
 
-        print(f"[LIVE] Connecting to Gemini model: {LIVE_MODEL}...")
+        print(f"[LIVE] Connecting to Gemini model: {LIVE_MODEL} (Lean Handshake)...")
         async with client.aio.live.connect(
             model=LIVE_MODEL, config=live_config
         ) as session:
             print("[LIVE] Connected to Gemini Live API.")
+
+            # 2. Parallel Config Update: Send full instructions and tools as the first turn
+            # This moves the processing penalty to AFTER the connection is active.
+            await session.send_client_content(
+                turns=[
+                    {
+                        "parts": [
+                            {"text": f"SYSTEM_UPDATE: {system_prompt}"},
+                            {"text": f"TOOL_REGISTRATION: {json.dumps(live_tools)}"},
+                            {"text": "SESSION_START: Greet the student briefly and wait for their input."}
+                        ]
+                    }
+                ],
+                turn_complete=True
+            )
+            print("[LIVE] Sent system context and tools to Gemini.")
 
             async def recv_from_gemini():
                 """Listen for Gemini responses — audio, text, or tool calls."""
