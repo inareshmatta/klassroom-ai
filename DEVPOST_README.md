@@ -4,7 +4,6 @@
 
 🔗 **Live App:** [https://klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app)
 
-
 **Built with:** `Python` · `FastAPI` · `React 19` · `Vite 7` · `Gemini 2.5 Flash Native Audio` · `Gemini 3 Flash` · `Gemini Vision` · `Google Search Grounding` · `WebSockets` · `PDF.js` · `Framer Motion` · `Docker` · `Google Cloud Run`
 
 ---
@@ -106,42 +105,6 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**, orc
 | **Search** | Google Search Grounding | Factual dictionary definitions and visual grounding |
 | **Infra** | Docker, Cloud Run, `cloudbuild.yaml` | Automated containerized deployment |
 
-### 📁 Folder Structure
-
-```
-KlassroomAI/
-├── frontend/                      # React + Vite SPA
-│   ├── src/
-│   │   ├── App.jsx                # State orchestration hub
-│   │   ├── index.css              # Design system tokens
-│   │   └── components/
-│   │       ├── CenterCanvas/      # PDF renderer, word tooltips, AI orb
-│   │       ├── LeftPanel/         # Voice controls, book library, upload
-│   │       ├── RightPanel/        # Knowledge vault, quiz engine
-│   │       ├── VisualPanel/       # AI visual explainer overlay
-│   │       ├── AssessmentPanel/   # Full assessment overlay
-│   │       └── CurriculumPlanner/ # Study schedule generator
-│   └── vite.config.js
-│
-├── backend/                       # FastAPI Python server
-│   ├── main.py                    # App entry + SPA serving
-│   ├── Dockerfile                 # Cloud Run container
-│   ├── routers/
-│   │   ├── live_session.py        # WebSocket ↔ Gemini Native Audio
-│   │   ├── interactions.py        # Gemini 3 orchestrator agent
-│   │   ├── vision.py              # Page analysis + dictionary
-│   │   ├── visual_gen.py          # Image generation
-│   │   ├── quiz.py                # Quiz generation
-│   │   ├── curriculum.py          # Study plan generation
-│   │   └── bookmarks.py           # Knowledge vault persistence
-│   └── services/
-│       └── gemini_client.py       # Shared Gemini client
-│
-├── cloudbuild.yaml                # GCP Infrastructure-as-Code
-├── start.bat                      # One-click local launcher
-└── architecture.png               # System architecture diagram
-```
-
 ---
 
 ## Challenges we ran into
@@ -152,7 +115,6 @@ KlassroomAI/
 | 🔴 **1008 Policy Violation disconnects** | `speech_config` block unsupported by Native Audio preview models | Stripped config to minimal dict matching official Gemini Live API docs |
 | 🟡 **PDF text misalignment** | Custom bounding-box detection was slow and inaccurate | Migrated to `pdf.js` native `TextLayer` for pixel-perfect DOM overlay |
 | 🟡 **Barge-in trailing audio** | Old audio chunks kept playing after interruption | Added `interrupted` event handler that calls `.stop()` on all active `BufferSource` nodes |
-| 🟡 **API key leaked to GitHub** | `.env` committed before `.gitignore` was in place | Google auto-revoked key; we scrubbed git history and rotated the key |
 
 ---
 
@@ -198,50 +160,16 @@ KlassroomAI/
 
 ---
 
-## 🚀 Spin-Up Instructions
-
-### Prerequisites
-- **Python 3.10+** · **Node.js 18+**
-
-### 1. Clone & Configure
-```bash
-git clone https://github.com/inareshmatta/klassroom-ai.git
-cd klassroom-ai
-```
-
-Create `backend/.env`:
-```env
-GEMINI_API_KEY=your_key_here
-```
-
-### 2. Run
-**Windows** — double-click `start.bat` or:
-```bash
-./start.bat
-```
-
-**Manual:**
-```bash
-# Terminal 1: Backend
-cd backend && pip install -r requirements.txt && uvicorn main:app --port 8080
-
-# Terminal 2: Frontend
-cd frontend && npm install && npm run dev
-```
-
----
-
 ## 🧪 Reproducible Testing Instructions
 
-After spinning up the app (see above), here's how to test every feature:
+Visit the live app at **[https://klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app)** and follow these steps:
 
 ### Test 1: Upload a PDF & Interactive Words
-1. Open [http://localhost:5173](http://localhost:5173) in Chrome
+1. Open the live app in Chrome
 2. Drag any PDF into the upload area on the left panel
-3. Wait for the PDF to render in the center canvas
-4. **Click any word** on the page → a dictionary tooltip should appear with pronunciation, etymology, and definition
-5. Click **🔖 Save** in the tooltip → the word appears in the **Knowledge Vault** on the right panel
-6. **Highlight a multi-word phrase** → the same tooltip appears for the entire selection
+3. **Click any word** on the rendered page → a dictionary tooltip appears with pronunciation, etymology, and definition
+4. Click **🔖 Save** → the word appears in the **Knowledge Vault** (right panel)
+5. **Highlight a multi-word phrase** → the same tooltip appears for the entire selection
 
 ### Test 2: Voice Tutor (Real-time Conversation)
 1. With a PDF loaded, click **🎙 Start Tutor** in the left panel
@@ -249,38 +177,32 @@ After spinning up the app (see above), here's how to test every feature:
 3. **Speak naturally**: *"Can you explain what's on this page?"*
 4. The AI should respond **within 1-2 seconds** with spoken audio
 5. **Test barge-in**: while the AI is speaking, interrupt it by saying *"Wait, what does that mean?"* — it should stop and respond to your interruption
-6. Click **⏹ Stop** to end the session
 
 ### Test 3: Visual Explainer
 1. Click any word on the PDF → dictionary tooltip appears
 2. Click **🎨 Visualize** → the Visual Explainer panel slides out with the word pre-filled
-3. Select a diagram type (e.g., Concept Map) and click **Generate**
-4. An AI-generated visual should appear
+3. Select a diagram type and click **Generate** → an AI-generated visual should appear
 
 ### Test 4: Explain Page & Diagrams (Vision)
 1. Navigate to a page with diagrams/charts in the PDF
-2. With the tutor running, click **👁️ Explain Page & Diagrams** button
+2. Click **👁️ Explain Page & Diagrams** button
 3. The AI should verbally describe the visual content on the page
 
 ### Test 5: Curriculum Planner
-1. Click **📅 Study Planner** in the left panel Quick Actions
-2. Set an exam date and daily study hours
-3. Click **Generate Plan** → a week-by-week study schedule appears
-4. Check off tasks to track progress; click **Reset** to start over
+1. Click **📅 Study Planner** in the left panel
+2. Set an exam date and daily study hours → click **Generate Plan**
+3. A week-by-week study schedule appears; check off tasks to track progress
 
-### Test 6: Cloud Deployment Verification
+### Test 6: Cloud Health Check
 1. Visit [https://klassroom-api-vav7hon2rq-uc.a.run.app/health](https://klassroom-api-vav7hon2rq-uc.a.run.app/health)
 2. Expected response: `{"status":"ok","service":"KlassroomAI"}`
-3. Visit [https://klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app) to see the full app served from Cloud Run
 
 ---
 
 ## ☁️ Cloud Deployment Proof
 
-| Item | Link |
+| Item | Details |
 |---|---|
 | **Live App** | [klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app) |
 | **Health Check** | [/health](https://klassroom-api-vav7hon2rq-uc.a.run.app/health) |
-| **Infrastructure-as-Code** | [cloudbuild.yaml](https://github.com/inareshmatta/klassroom-ai/blob/main/cloudbuild.yaml) + [Dockerfile](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/Dockerfile) |
-| **Google Cloud API Usage** | [live_session.py](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/live_session.py) — Gemini LiveConnect API calls · [gemini_client.py](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/services/gemini_client.py) — Gemini client init · [interactions.py](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/interactions.py) — Agentic orchestration |
-| **Cloud Console** | [Cloud Run Dashboard](https://console.cloud.google.com/run/detail/us-central1/klassroom-api?project=alert-nimbus-482707-p6) |
+| **Infrastructure-as-Code** | `cloudbuild.yaml` + `Dockerfile` included in repo |
