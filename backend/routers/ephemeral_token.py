@@ -34,11 +34,10 @@ async def mint_ephemeral_token(
             "model": "gemini-2.5-flash-native-audio-preview-12-2025",
         }
     except Exception:
-        # Fallback: return API key-based token for local dev
-        api_key = os.getenv("GEMINI_API_KEY", "")
-        return {
-            "token": api_key,
-            "expires_at": int(time.time()) + 3600,
-            "model": "gemini-2.5-flash-native-audio-preview-12-2025",
-            "type": "api_key",
-        }
+        # SECURITY: Never expose the raw API key to clients.
+        # All Gemini calls go through the backend WebSocket proxy.
+        raise HTTPException(
+            status_code=503,
+            detail="Ephemeral token service unavailable. Use the backend WebSocket proxy instead."
+        )
+
