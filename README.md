@@ -57,8 +57,13 @@ The AI tutor isn't just a chatbot — it acts as an **autonomous orchestration a
 |---|---|---|
 | `generate_quiz` | After explaining a topic | A quiz panel slides out with MCQs, True/False, and Fill-in-the-Blank questions |
 | `lookup_word` | Student encounters an unfamiliar term | Google Search-grounded dictionary with IPA pronunciation, etymology, and contextual definition |
+| `generate_visual` | Concept needs a picture | Generates infographics, flowcharts, or concept maps via Nano Banana 2 |
 | `suggest_next_topic` | Student finishes a concept | AI guides them to the next logical topic based on curriculum and prerequisites |
 | `create_bookmark` | Student highlights important text | Content is saved to the Knowledge Vault for revision |
+| `summarize_page` | Page is dense or overwhelming | Generates concise bullet-point summaries of the current textbook page |
+| `explain_like_im_5` | Student says "I still don't get it" | Simplifies concept with everyday analogies a child could understand |
+| `compare_concepts` | Student confuses two similar terms | Side-by-side comparison showing similarities, differences, and a summary |
+| `generate_flashcards` | Student finishes a chapter | Creates front/back revision flashcards for spaced repetition study |
 
 ### 🖼️ Visual Explainer (Nano Banana 2)
 Some concepts are impossible to understand through text or voice alone.

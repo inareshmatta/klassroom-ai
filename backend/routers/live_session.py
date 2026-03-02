@@ -128,6 +128,72 @@ AGENT_TOOLS = [
                 required=["current_topic"],
             ),
         ),
+        types.FunctionDeclaration(
+            name="summarize_page",
+            description=(
+                "Create a concise bullet-point summary of the current textbook page. "
+                "Call this when: the student says 'summarize this page', 'give me the key points', "
+                "or seems overwhelmed by a dense page of text."
+            ),
+            parameters=types.Schema(
+                type="OBJECT",
+                properties={
+                    "page_text": types.Schema(type="STRING", description="The text content of the current page"),
+                    "max_points": types.Schema(type="INTEGER", description="Maximum number of bullet points (3-8)"),
+                },
+                required=["page_text"],
+            ),
+        ),
+        types.FunctionDeclaration(
+            name="explain_like_im_5",
+            description=(
+                "Simplify a complex concept into an explanation a 5-year-old could understand. "
+                "Uses analogies, everyday examples, and simple language. "
+                "Call this when: the student says 'I still don't get it', 'make it simpler', "
+                "or is clearly struggling after a first explanation."
+            ),
+            parameters=types.Schema(
+                type="OBJECT",
+                properties={
+                    "concept": types.Schema(type="STRING", description="The concept to simplify"),
+                    "subject": types.Schema(type="STRING", description="The subject area"),
+                },
+                required=["concept"],
+            ),
+        ),
+        types.FunctionDeclaration(
+            name="compare_concepts",
+            description=(
+                "Create a side-by-side comparison of two concepts showing similarities and differences. "
+                "Call this when: the student confuses two similar terms, asks 'what's the difference between X and Y', "
+                "or is studying contrasting ideas."
+            ),
+            parameters=types.Schema(
+                type="OBJECT",
+                properties={
+                    "concept_a": types.Schema(type="STRING", description="First concept"),
+                    "concept_b": types.Schema(type="STRING", description="Second concept"),
+                    "subject": types.Schema(type="STRING", description="Subject context"),
+                },
+                required=["concept_a", "concept_b"],
+            ),
+        ),
+        types.FunctionDeclaration(
+            name="generate_flashcards",
+            description=(
+                "Generate study flashcards (front/back) from a topic for spaced repetition revision. "
+                "Call this when: the student asks for flashcards, wants to prepare for revision, "
+                "or finishes studying a chapter."
+            ),
+            parameters=types.Schema(
+                type="OBJECT",
+                properties={
+                    "topic": types.Schema(type="STRING", description="The topic to create flashcards for"),
+                    "num_cards": types.Schema(type="INTEGER", description="Number of flashcards (3-10)"),
+                },
+                required=["topic"],
+            ),
+        ),
     ])
 ]
 
@@ -215,6 +281,65 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         )
         return {"suggestions": json.loads(response.text), "tool": "suggest_next_topic"}
 
+    elif name == "summarize_page":
+        page_text = args.get("page_text", "")
+        max_points = min(args.get("max_points", 5), 8)
+
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=[
+                f"Summarize this page into {max_points} concise bullet points. "
+                f"Focus on key concepts, definitions, and important facts.\n\nPage text:\n{page_text[:3000]}"
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        return {"summary": json.loads(response.text), "tool": "summarize_page"}
+
+    elif name == "explain_like_im_5":
+        concept = args.get("concept", "")
+        subject = args.get("subject", "General")
+
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=[
+                f'Explain "{concept}" ({subject}) like I\'m 5 years old. '
+                f'Use a fun everyday analogy. Return JSON: simple_explanation, analogy, fun_fact.'
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        return {"eli5": json.loads(response.text), "tool": "explain_like_im_5"}
+
+    elif name == "compare_concepts":
+        a = args.get("concept_a", "")
+        b = args.get("concept_b", "")
+        subject = args.get("subject", "General")
+
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=[
+                f'Compare "{a}" vs "{b}" in {subject}. Return JSON: '
+                f'similarities (array of strings), differences (array of objects with a, b keys), '
+                f'and a one_liner summary.'
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        return {"comparison": json.loads(response.text), "tool": "compare_concepts"}
+
+    elif name == "generate_flashcards":
+        topic = args.get("topic", "")
+        num = min(args.get("num_cards", 5), 10)
+
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=[
+                f"Create {num} study flashcards about '{topic}'. "
+                f"Return JSON with 'cards' array. Each card has: front (question/term), "
+                f"back (answer/definition), hint (optional clue)."
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        return {"flashcards": json.loads(response.text), "tool": "generate_flashcards"}
+
     return {"error": f"Unknown tool: {name}"}
 
 
@@ -244,7 +369,7 @@ async def live_session(ws: WebSocket):
         book_context = init_data.get("book_context", "")
         page_text = init_data.get("page_text", "")
 
-        system_prompt = f"""You are ClassbookAI, an expert {subject} tutor for Grade {grade} students.
+        system_prompt = f"""You are KlassroomAI, an expert {subject} tutor for Grade {grade} students.
 You speak in {language}. You are warm, encouraging, and adapt to the student's level.
 
 IMPORTANT: You have tools available. USE THEM PROACTIVELY:
@@ -253,6 +378,10 @@ IMPORTANT: You have tools available. USE THEM PROACTIVELY:
 - After explaining a topic → call generate_quiz to test understanding
 - When the student learns something important → call create_bookmark
 - When they finish a topic → call suggest_next_topic
+- When a page is dense or overwhelming → call summarize_page
+- When a student says "I don't get it" or needs simpler language → call explain_like_im_5
+- When a student confuses two things or asks "what's the difference" → call compare_concepts
+- When a student finishes a chapter or asks for revision material → call generate_flashcards
 
 Current textbook page content:
 {page_text[:2000]}
