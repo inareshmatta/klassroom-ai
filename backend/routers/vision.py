@@ -38,8 +38,19 @@ Return JSON with these exact keys:
         ],
         config=config,
     )
-    return json.loads(response.text)
-
+    try:
+        if not response or not response.text:
+            raise ValueError("Empty response from model")
+        return json.loads(response.text)
+    except Exception as e:
+        print(f"[Analyze Page Error] {e}")
+        return {
+            "full_text": "Failed to analyze page.",
+            "key_concepts": [],
+            "has_diagram": False,
+            "has_formula": False,
+            "page_summary": "Analysis unavailable for this page."
+        }
 
 @router.post("/word-bboxes")
 async def word_bboxes(
