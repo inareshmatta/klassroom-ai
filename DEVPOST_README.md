@@ -282,4 +282,5 @@ After spinning up the app (see above), here's how to test every feature:
 | **Live App** | [klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app) |
 | **Health Check** | [/health](https://klassroom-api-vav7hon2rq-uc.a.run.app/health) |
 | **Infrastructure-as-Code** | [cloudbuild.yaml](https://github.com/inareshmatta/klassroom-ai/blob/main/cloudbuild.yaml) + [Dockerfile](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/Dockerfile) |
+| **Google Cloud API Usage** | [live_session.py](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/live_session.py) — Gemini LiveConnect API calls · [gemini_client.py](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/services/gemini_client.py) — Gemini client init · [interactions.py](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/interactions.py) — Agentic orchestration |
 | **Cloud Console** | [Cloud Run Dashboard](https://console.cloud.google.com/run/detail/us-central1/klassroom-api?project=alert-nimbus-482707-p6) |
