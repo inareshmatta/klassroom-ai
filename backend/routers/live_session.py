@@ -379,16 +379,24 @@ async def live_session(ws: WebSocket):
         system_prompt = f"""You are KlassroomAI, an expert {subject} tutor for Grade {grade} students.
 You speak in {language}. You are warm, encouraging, and adapt to the student's level.
 
-IMPORTANT: You have tools available. USE THEM PROACTIVELY:
-- When a student struggles with a term → call lookup_word
-- When a concept needs visualization → call generate_visual
-- After explaining a topic → call generate_quiz to test understanding
-- When the student learns something important → call create_bookmark
-- When they finish a topic → call suggest_next_topic
-- When a page is dense or overwhelming → call summarize_page
-- When a student says "I don't get it" or needs simpler language → call explain_like_im_5
-- When a student confuses two things or asks "what's the difference" → call compare_concepts
-- When a student finishes a chapter or asks for revision material → call generate_flashcards
+Your teaching approach:
+- Give FULL, COMPLETE explanations — never stop mid-thought
+- Use simple analogies and real-world examples
+- Break complex topics into bite-sized steps
+- Ask the student questions to check understanding
+- Be conversational and make learning fun
+- When explaining a concept, cover it thoroughly before moving on
+
+You have tools available. USE THEM when appropriate:
+- generate_quiz: Quiz the student after explaining a topic
+- lookup_word: Define unfamiliar terms
+- generate_visual: Create diagrams when visual explanation helps
+- create_bookmark: Save important concepts for revision
+- suggest_next_topic: Recommend next study topic
+- summarize_page: Summarize dense pages
+- explain_like_im_5: Simplify concepts with everyday analogies
+- compare_concepts: Compare two similar concepts side-by-side
+- generate_flashcards: Create revision flashcards
 
 Current textbook page content:
 {page_text[:2000]}
@@ -398,11 +406,122 @@ Book context: {book_context[:500]}
 Be conversational, use the student's name if they give it, and make learning fun!"""
 
         # Connect to Gemini Live API
-        # Removed speech_config because native audio models do not support voice selection yet (causes 1008 error)
+        # Plain dict format for tools (matching official docs exactly)
+        live_tools = [{
+            "function_declarations": [
+                {
+                    "name": "generate_quiz",
+                    "description": "Generate quiz questions to test student understanding",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic": {"type": "string", "description": "The topic to quiz on"},
+                            "num_questions": {"type": "integer", "description": "Number of questions (2-5)"},
+                            "quiz_type": {"type": "string", "description": "Type: mcq, fill_blank, true_false"},
+                        },
+                        "required": ["topic"]
+                    }
+                },
+                {
+                    "name": "lookup_word",
+                    "description": "Look up definition, pronunciation, and etymology of a word",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "word": {"type": "string", "description": "The word to look up"},
+                            "subject": {"type": "string", "description": "Subject context"},
+                        },
+                        "required": ["word"]
+                    }
+                },
+                {
+                    "name": "generate_visual",
+                    "description": "Generate a visual diagram to explain a concept",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic": {"type": "string", "description": "What to visualize"},
+                            "visual_type": {"type": "string", "description": "Type: concept_map, flowchart, diagram"},
+                        },
+                        "required": ["topic"]
+                    }
+                },
+                {
+                    "name": "create_bookmark",
+                    "description": "Save an important concept for the student's revision",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string", "description": "The concept to save"},
+                        },
+                        "required": ["text"]
+                    }
+                },
+                {
+                    "name": "suggest_next_topic",
+                    "description": "Suggest what the student should study next",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "current_topic": {"type": "string", "description": "What they just studied"},
+                        },
+                        "required": ["current_topic"]
+                    }
+                },
+                {
+                    "name": "summarize_page",
+                    "description": "Create a bullet-point summary of the current page",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "page_text": {"type": "string", "description": "Text content of the page"},
+                            "max_points": {"type": "integer", "description": "Max bullet points (3-8)"},
+                        },
+                        "required": ["page_text"]
+                    }
+                },
+                {
+                    "name": "explain_like_im_5",
+                    "description": "Simplify a complex concept for a 5-year-old",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "concept": {"type": "string", "description": "The concept to simplify"},
+                        },
+                        "required": ["concept"]
+                    }
+                },
+                {
+                    "name": "compare_concepts",
+                    "description": "Compare two concepts side-by-side",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "concept_a": {"type": "string", "description": "First concept"},
+                            "concept_b": {"type": "string", "description": "Second concept"},
+                        },
+                        "required": ["concept_a", "concept_b"]
+                    }
+                },
+                {
+                    "name": "generate_flashcards",
+                    "description": "Generate revision flashcards on a topic",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic": {"type": "string", "description": "Topic for flashcards"},
+                            "num_cards": {"type": "integer", "description": "Number of cards (3-10)"},
+                        },
+                        "required": ["topic"]
+                    }
+                },
+            ]
+        }]
+
         live_config = {
             "response_modalities": ["AUDIO"],
             "system_instruction": system_prompt,
-            "tools": [{"function_declarations": [t.to_dict() if hasattr(t, 'to_dict') else t for t in AGENT_TOOLS[0].function_declarations]}],
+            "tools": live_tools,
         }
 
         async with client.aio.live.connect(
@@ -514,6 +633,7 @@ Be conversational, use the student's name if they give it, and make learning fun
                 recv_task.cancel()
 
     except Exception as e:
+        print(f"[LIVE] ERROR: {type(e).__name__}: {e}")
         try:
             await ws.send_json({"type": "error", "message": str(e)})
         except:

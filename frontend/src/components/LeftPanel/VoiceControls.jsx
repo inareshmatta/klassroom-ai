@@ -188,7 +188,10 @@ export default function VoiceControls({
             }
         }
 
-        ws.onclose = () => {
+        ws.onclose = (e) => {
+            if (e.code !== 1000) {
+                appendTranscript('system', `⚠️ ${e.code} ${e.reason || 'Connection closed'}`)
+            }
             setSession(s => ({ ...s, isLive: false, orbState: 'idle' }))
             cancelAnimationFrame(animFrameRef.current)
         }
