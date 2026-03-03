@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from routers import live_session, vision, visual_gen, upload, quiz, bookmarks, ephemeral_token, interactions, curriculum
+from routers import live_session, vision, visual_gen, upload, quiz, bookmarks, ephemeral_token, interactions, curriculum, tool_executor
 
 app = FastAPI(title="KlassroomAI Backend", version="1.0.0")
 
@@ -30,6 +30,7 @@ app.include_router(bookmarks.router)
 app.include_router(ephemeral_token.router)
 app.include_router(interactions.router)
 app.include_router(curriculum.router)
+app.include_router(tool_executor.router)
 
 @app.get("/health")
 async def health():

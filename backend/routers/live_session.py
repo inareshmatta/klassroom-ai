@@ -373,6 +373,7 @@ async def live_session(ws: WebSocket):
         subject = init_data.get("subject", "General")
         grade = init_data.get("grade", "10")
         language = init_data.get("language", "English")
+        voice = init_data.get("voice", "Kore")
         book_context = init_data.get("book_context", "")
         page_text = init_data.get("page_text", "")
 
@@ -382,220 +383,144 @@ However, if the student speaks a different language or explicitly asks you to ch
 
 Be conversational, use the student's name if they give it, and make learning fun!"""
 
-        # Connect to Gemini Live API
-        live_tools = [{
-            "function_declarations": [
-                {
-                    "name": "generate_quiz",
-                    "description": "Generate quiz questions to test student understanding",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "topic": {"type": "string", "description": "The topic to quiz on"},
-                            "num_questions": {"type": "integer", "description": "Number of questions (2-5)"},
-                            "quiz_type": {"type": "string", "description": "Type: mcq, fill_blank, true_false"},
-                        },
-                        "required": ["topic"]
-                    }
-                },
-                {
-                    "name": "lookup_word",
-                    "description": "Look up definition, pronunciation, and etymology of a word",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "word": {"type": "string", "description": "The word to look up"},
-                            "subject": {"type": "string", "description": "Subject context"},
-                        },
-                        "required": ["word"]
-                    }
-                },
-                {
-                    "name": "generate_visual",
-                    "description": "Generate a visual diagram to explain a concept",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "topic": {"type": "string", "description": "What to visualize"},
-                            "visual_type": {"type": "string", "description": "Type: concept_map, flowchart, diagram"},
-                        },
-                        "required": ["topic"]
-                    }
-                },
-                {
-                    "name": "create_bookmark",
-                    "description": "Save an important concept for the student's revision",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "text": {"type": "string", "description": "The concept to save"},
-                        },
-                        "required": ["text"]
-                    }
-                },
-                {
-                    "name": "suggest_next_topic",
-                    "description": "Suggest what the student should study next",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "current_topic": {"type": "string", "description": "What they just studied"},
-                        },
-                        "required": ["current_topic"]
-                    }
-                },
-                {
-                    "name": "summarize_page",
-                    "description": "Create a bullet-point summary of the current page",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "page_text": {"type": "string", "description": "Text content of the page"},
-                            "max_points": {"type": "integer", "description": "Max bullet points (3-8)"},
-                        },
-                        "required": ["page_text"]
-                    }
-                },
-                {
-                    "name": "explain_like_im_5",
-                    "description": "Simplify a complex concept for a 5-year-old",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "concept": {"type": "string", "description": "The concept to simplify"},
-                        },
-                        "required": ["concept"]
-                    }
-                },
-                {
-                    "name": "compare_concepts",
-                    "description": "Compare two concepts side-by-side",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "concept_a": {"type": "string", "description": "First concept"},
-                            "concept_b": {"type": "string", "description": "Second concept"},
-                        },
-                        "required": ["concept_a", "concept_b"]
-                    }
-                },
-                {
-                    "name": "generate_flashcards",
-                    "description": "Generate revision flashcards on a topic",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "topic": {"type": "string", "description": "Topic for flashcards"},
-                            "num_cards": {"type": "integer", "description": "Number of cards (3-10)"},
-                        },
-                        "required": ["topic"]
-                    }
-                },
-            ]
-        }]
-
+        # Use the properly-defined AGENT_TOOLS (types.Tool objects)
         live_config = types.LiveConnectConfig(
             response_modalities=["AUDIO"],
             system_instruction=types.Content(parts=[types.Part.from_text(text=system_prompt)]),
-            tools=live_tools,
+            tools=AGENT_TOOLS,
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
+                )
+            ),
+            input_audio_transcription=types.AudioTranscriptionConfig(),
+            output_audio_transcription=types.AudioTranscriptionConfig(),
         )
 
-        print(f"[LIVE] Connecting to Gemini model: {LIVE_MODEL}...")
+        print(f"[LIVE] Connecting to Gemini model: {LIVE_MODEL} with voice={voice}...")
         async with client.aio.live.connect(
             model=LIVE_MODEL, config=live_config
         ) as session:
             print("[LIVE] Connected to Gemini Live API.")
 
             # Trigger immediate greeting and inject page text as context
+            greeting_text = f"Hi there! Let's start our session."
+            if page_text:
+                greeting_text = f"[Page context: {page_text[:1000]}] {greeting_text}"
             await session.send_client_content(
-                turns=[{"parts": [{"text": f"[Page context: {page_text[:1000]}] Hi there! Let's start our session."}]}],
+                turns=[{"role": "user", "parts": [{"text": greeting_text}]}],
                 turn_complete=True
             )
             print("[LIVE] Sent greeting trigger and context.")
 
             async def recv_from_gemini():
-                """Listen for Gemini responses — audio, text, or tool calls."""
+                """Listen for Gemini responses — audio, text, or tool calls.
+                
+                CRITICAL: session.receive() is PER-TURN. After a turn completes,
+                the async generator exits. We must call it again in a loop to
+                keep receiving responses across multiple conversation turns.
+                (See official Gemini Live API audio example.)
+                """
                 try:
-                    async for response in session.receive():
-                        # Tool calls — agent behavior
-                        if response.tool_call:
-                            function_responses = []
-                            for fc in response.tool_call.function_calls:
-                                # Execute the tool
-                                tool_result = await execute_tool(
-                                    fc.name, dict(fc.args), client
-                                )
+                    while True:
+                        turn = session.receive()
+                        async for response in turn:
+                            try:
+                                # Tool calls — agent behavior
+                                if response.tool_call:
+                                    function_responses = []
+                                    for fc in response.tool_call.function_calls:
+                                        # Execute the tool
+                                        tool_result = await execute_tool(
+                                            fc.name, dict(fc.args), client
+                                        )
 
-                                # Notify frontend
-                                await ws.send_json({
-                                    "type": "tool_call",
-                                    "tool": fc.name,
-                                    "args": dict(fc.args),
-                                    "result": tool_result,
-                                })
-
-                                function_responses.append(
-                                    types.FunctionResponse(
-                                        id=fc.id,
-                                        name=fc.name,
-                                        response={"result": tool_result},
-                                    )
-                                )
-
-                            # Send all tool results back to Gemini
-                            await session.send_tool_response(
-                                function_responses=function_responses
-                            )
-
-                        # Audio data
-                        if response.data is not None:
-                            header = bytes([0x01])
-                            await ws.send_bytes(header + response.data)
-
-                        # Server content (text, turn complete, transcriptions)
-                        if response.server_content:
-                            model_turn = response.server_content.model_turn
-                            if model_turn:
-                                for part in model_turn.parts:
-                                    if hasattr(part, 'text') and part.text:
+                                        # Notify frontend
                                         await ws.send_json({
-                                            "type": "transcript",
-                                            "role": "ai",
-                                            "text": part.text,
+                                            "type": "tool_call",
+                                            "tool": fc.name,
+                                            "args": dict(fc.args),
+                                            "result": tool_result,
                                         })
-                                        print(f"[LIVE] Gemini Transcript (Part): {part.text}")
 
-                            # Output audio transcription (what the AI is saying in text)
-                            if hasattr(response.server_content, 'output_transcription') and response.server_content.output_transcription:
-                                text = response.server_content.output_transcription.text
-                                if text and text.strip():
-                                    await ws.send_json({
-                                        "type": "transcript",
-                                        "role": "ai",
-                                        "text": text,
-                                    })
+                                        function_responses.append(
+                                            types.FunctionResponse(
+                                                id=fc.id,
+                                                name=fc.name,
+                                                response={"result": tool_result},
+                                            )
+                                        )
 
-                            # Input audio transcription (what the user is saying)
-                            if hasattr(response.server_content, 'input_transcription') and response.server_content.input_transcription:
-                                text = response.server_content.input_transcription.text
-                                if text and text.strip():
-                                    await ws.send_json({
-                                        "type": "transcript",
-                                        "role": "user",
-                                        "text": text,
-                                    })
-                                    print(f"[LIVE] Student Transcript: {text}")
+                                    # Send all tool results back to Gemini
+                                    await session.send_tool_response(
+                                        function_responses=function_responses
+                                    )
 
-                            if response.server_content.turn_complete:
-                                await ws.send_json({"type": "turn_complete"})
-                                print("[LIVE] Gemini: Turn Complete")
-                            
-                            if response.server_content.interrupted:
-                                await ws.send_json({"type": "interrupted"})
-                                print("[LIVE] Gemini: Interrupted")
+                                # Audio data
+                                if response.data is not None:
+                                    header = bytes([0x01])
+                                    await ws.send_bytes(header + response.data)
 
+                                # Server content (text, turn complete, transcriptions)
+                                if response.server_content:
+                                    model_turn = response.server_content.model_turn
+                                    if model_turn:
+                                        for part in model_turn.parts:
+                                            if hasattr(part, 'text') and part.text:
+                                                await ws.send_json({
+                                                    "type": "transcript",
+                                                    "role": "ai",
+                                                    "text": part.text,
+                                                })
+                                                print(f"[LIVE] Gemini Transcript (Part): {part.text}")
+
+                                    # Output audio transcription (what the AI is saying in text)
+                                    if hasattr(response.server_content, 'output_transcription') and response.server_content.output_transcription:
+                                        text = response.server_content.output_transcription.text
+                                        if text and text.strip():
+                                            await ws.send_json({
+                                                "type": "transcript",
+                                                "role": "ai",
+                                                "text": text,
+                                            })
+
+                                    # Input audio transcription (what the user is saying)
+                                    if hasattr(response.server_content, 'input_transcription') and response.server_content.input_transcription:
+                                        text = response.server_content.input_transcription.text
+                                        if text and text.strip():
+                                            await ws.send_json({
+                                                "type": "transcript",
+                                                "role": "user",
+                                                "text": text,
+                                            })
+                                            print(f"[LIVE] Student Transcript: {text}")
+
+                                    if response.server_content.turn_complete:
+                                        await ws.send_json({"type": "turn_complete"})
+                                        print("[LIVE] Gemini: Turn Complete")
+                                    
+                                    if response.server_content.interrupted:
+                                        await ws.send_json({"type": "interrupted"})
+                                        print("[LIVE] Gemini: Interrupted")
+
+                            except Exception as resp_err:
+                                # Log per-response errors but keep the loop alive
+                                print(f"[LIVE] Error processing response: {type(resp_err).__name__}: {resp_err}")
+                                try:
+                                    await ws.send_json({"type": "error", "message": f"Response error: {resp_err}"})
+                                except Exception:
+                                    pass
+
+                        print("[LIVE] Turn ended, waiting for next turn...")
+
+                except asyncio.CancelledError:
+                    print("[LIVE] Receiver task cancelled.")
                 except Exception as e:
-                    await ws.send_json({"type": "error", "message": str(e)})
+                    print(f"[LIVE] Receiver fatal error: {type(e).__name__}: {e}")
+                    try:
+                        await ws.send_json({"type": "error", "message": str(e)})
+                    except Exception:
+                        pass
 
             # Start receiving from Gemini in background
             print("[LIVE] Starting background receiver task...")
@@ -610,43 +535,51 @@ Be conversational, use the student's name if they give it, and make learning fun
                     if msg.get("type") == "websocket.disconnect":
                         break
 
-                    if "bytes" in msg:
-                        raw = msg["bytes"]
-                        msg_type = raw[0]
-                        payload = raw[1:]
+                    try:
+                        if "bytes" in msg:
+                            raw = msg["bytes"]
+                            msg_type = raw[0]
+                            payload = raw[1:]
 
-                        if msg_type == 0x00:
-                            # Audio from mic (PCM 16kHz)
-                            if not hasattr(ws, '_pcm_count'): ws._pcm_count = 0
-                            ws._pcm_count += 1
-                            if ws._pcm_count in (1, 10) or ws._pcm_count % 50 == 0:
-                                print(f"[LIVE] Forwarding audio to Gemini (chunk {ws._pcm_count}, {len(payload)} bytes)")
-                            
-                            await session.send_realtime_input(
-                                audio={"data": payload, "mime_type": "audio/pcm;rate=16000"}
-                            )
-                        elif msg_type == 0x10:
-                            print(f"[LIVE] Forwarding video frame to Gemini ({len(payload)} bytes)")
-                            await session.send_realtime_input(
-                                video={"data": payload, "mime_type": "image/jpeg"}
-                            )
+                            if msg_type == 0x00:
+                                # Audio from mic (PCM 16kHz)
+                                if not hasattr(ws, '_pcm_count'): ws._pcm_count = 0
+                                ws._pcm_count += 1
+                                if ws._pcm_count in (1, 10) or ws._pcm_count % 50 == 0:
+                                    print(f"[LIVE] Forwarding audio to Gemini (chunk {ws._pcm_count}, {len(payload)} bytes)")
+                                
+                                await session.send_realtime_input(
+                                    audio={"data": payload, "mime_type": "audio/pcm;rate=16000"}
+                                )
+                            elif msg_type == 0x10:
+                                print(f"[LIVE] Forwarding video frame to Gemini ({len(payload)} bytes)")
+                                await session.send_realtime_input(
+                                    video={"data": payload, "mime_type": "image/jpeg"}
+                                )
 
-                    elif "text" in msg:
-                        data = json.loads(msg["text"])
+                        elif "text" in msg:
+                            data = json.loads(msg["text"])
 
-                        if data.get("type") == "text":
-                            await session.send_client_content(
-                                turns={"parts": [{"text": data["content"]}]}
-                            )
-                        elif data.get("type") == "context_update":
-                            await session.send_client_content(
-                                turns={"parts": [{"text": f"[Context update] Student is now on: {data.get('text', '')}"}]}
-                            )
-                        elif data.get("type") == "client_interruption":
-                            # Explicitly halt the server's generation by sending an empty turn list
-                            await session.send_client_content(turns=[], turn_complete=False)
-                            # Echo the interruption signal back to the client to lock onto the new turn
-                            await ws.send_json({"type": "interrupted"})
+                            if data.get("type") == "text":
+                                await session.send_client_content(
+                                    turns=[{"role": "user", "parts": [{"text": data["content"]}]}],
+                                    turn_complete=True
+                                )
+                            elif data.get("type") == "context_update":
+                                await session.send_client_content(
+                                    turns=[{"role": "user", "parts": [{"text": f"[Context update] Student is now on: {data.get('text', '')}"}]}],
+                                    turn_complete=True
+                                )
+                            elif data.get("type") == "client_interruption":
+                                # Explicitly halt the server's generation by sending an empty turn list
+                                await session.send_client_content(turns=[], turn_complete=False)
+                                # Echo the interruption signal back to the client to lock onto the new turn
+                                await ws.send_json({"type": "interrupted"})
+
+                    except Exception as bridge_err:
+                        # Log per-message errors but keep the bridge loop alive
+                        print(f"[LIVE] Bridge error: {type(bridge_err).__name__}: {bridge_err}")
+                        continue
 
             except WebSocketDisconnect:
                 pass

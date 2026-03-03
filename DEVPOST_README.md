@@ -4,7 +4,7 @@
 
 🔗 **Live App:** [https://klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app)
 
-**Built with:** `Python` · `FastAPI` · `React 19` · `Vite 7` · `Gemini 2.5 Flash Native Audio` · `Gemini 3 Flash` · `Gemini Vision` · `Google Search Grounding` · `WebSockets` · `PDF.js` · `Framer Motion` · `Docker` · `Google Cloud Run`
+**Built with:** `Python` · `FastAPI` · `React 19` · `Vite 7` · `Gemini 2.5 Flash Native Audio` · `Gemini 3 Flash` · `Gemini Vision` · `Google Search Grounding` · `@google/genai SDK` · `Ephemeral Tokens` · `PDF.js` · `Framer Motion` · `Docker` · `Google Cloud Run`
 
 ---
 
@@ -32,9 +32,10 @@ At its core, KlassroomAI features a **voice-first proactive tutor** powered by t
 | Feature | How it works |
 |---|---|
 | **Natural Conversation** | Students speak naturally; the AI responds in a warm, human-like voice with <500ms latency |
-| **True Barge-in** | Binary PCM audio streams via WebSockets allow instant interruption — say "Wait, explain that again" mid-sentence |
+| **Direct Client-to-Server** | Browser connects directly to Gemini Live API via ephemeral tokens — no backend proxy, no double-hop |
+| **True Barge-in** | Server-side VAD detects interruptions instantly — say "Wait, explain that again" mid-sentence |
 | **Contextual Awareness** | The tutor reads the current PDF page text, analyzes visible diagrams, and adapts its teaching in real-time |
-| **Precise Audio Scheduling** | Uses `AudioContext.currentTime` scheduling instead of event-loop queues to eliminate stuttering and lag |
+| **Secure by Design** | API key never leaves the backend — frontend uses short-lived, single-use ephemeral tokens |
 
 ### 🤖 2. Autonomous Agentic Behaviors
 
@@ -89,7 +90,7 @@ Students input their exam date and available daily study hours:
 
 ![KlassroomAI Architecture](https://raw.githubusercontent.com/inareshmatta/klassroom-ai/main/docs/architecture_diagram.png)
 
-Our system is a decoupled **React Frontend** and **FastAPI Python Backend**, orchestrated via WebSockets for real-time streaming to the Gemini API. The full stack is deployed to **Google Cloud Run**.
+Our system is a decoupled **React Frontend** and **FastAPI Python Backend**. The voice tutor uses Google's recommended **client-to-server** architecture — the browser connects **directly** to the Gemini Live API via short-lived ephemeral tokens, eliminating the backend WebSocket proxy for minimal latency. Tool execution stays server-side via REST endpoints.
 
 ### 🔊 Voice Tutor Data Flow
 
@@ -103,8 +104,9 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**, orc
 | **Styling** | Vanilla CSS, Framer Motion | Premium animations and transitions |
 | **PDF Engine** | PDF.js (Mozilla) | Pixel-perfect TextLayer over canvas for clickable words |
 | **Audio** | WebAudio API | Precise `currentTime` scheduling for zero-lag playback |
-| **Backend** | Python, FastAPI | REST + WebSocket API server |
-| **Voice AI** | Gemini 2.5 Flash Native Audio | Real-time bidirectional voice via LiveConnect |
+| **Backend** | Python, FastAPI | REST API + ephemeral token minting |
+| **Voice AI** | Gemini 2.5 Flash Native Audio | Real-time bidirectional voice via direct client-to-server connection |
+| **Security** | Ephemeral Tokens | Short-lived, single-use tokens — API key never leaves server |
 | **Orchestrator** | Gemini 3 Flash Preview | Agent orchestration with tool calling |
 | **Vision** | Gemini 2.5 Pro Vision | Page snapshot analysis for diagram explanation |
 | **Search** | Google Search Grounding | Factual dictionary definitions and visual grounding |
@@ -116,10 +118,10 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**, orc
 
 | Challenge | Root Cause | Our Solution |
 |---|---|---|
-| 🔴 **20-30s audio lag** | Recursive `onended` event-loop queuing on the main thread | Refactored to precise `AudioContext.currentTime` scheduling on the audio thread |
-| 🔴 **1008 Policy Violation disconnects** | `speech_config` block unsupported by Native Audio preview models | Stripped config to minimal dict matching official Gemini Live API docs |
+| 🔴 **Overengineered proxy** | Server-to-server WebSocket relay added latency + complexity + per-turn receive loop bug | Migrated to Google's recommended **client-to-server** architecture with ephemeral tokens |
+| 🔴 **API key security** | Direct client connection risks exposing API key | Backend mints single-use, 1-min ephemeral tokens via `auth_tokens.create()` |
+| 🟡 **20-30s audio lag** | Recursive `onended` event-loop queuing on main thread | Refactored to precise `AudioContext.currentTime` scheduling at 24kHz |
 | 🟡 **PDF text misalignment** | Custom bounding-box detection was slow and inaccurate | Migrated to `pdf.js` native `TextLayer` for pixel-perfect DOM overlay |
-| 🟡 **Barge-in trailing audio** | Old audio chunks kept playing after interruption | Added `interrupted` event handler that calls `.stop()` on all active `BufferSource` nodes |
 
 ---
 
@@ -139,7 +141,7 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**, orc
 
 ## What we learned
 
-📘 The incredible power (and difficulty) of managing **asynchronous binary WebSockets** for real-time PCM audio streaming
+📘 The **client-to-server** pattern with ephemeral tokens is both simpler and faster than backend WebSocket proxying
 
 📘 How to orchestrate **multi-model agent handoffs** — using Gemini-3-Flash for orchestration and Native Audio for the real-time voice loop
 

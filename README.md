@@ -11,7 +11,7 @@
   [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
   [![Gemini](https://img.shields.io/badge/Google_Gemini-886FBF?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
   [![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
-  [![WebSockets](https://img.shields.io/badge/WebSockets-010101?style=for-the-badge&logo=socketdotio&logoColor=white)]()
+  [![Live API](https://img.shields.io/badge/Live_API_Direct-010101?style=for-the-badge&logo=socketdotio&logoColor=white)]()
   [![PDF.js](https://img.shields.io/badge/PDF.js-FF6600?style=for-the-badge&logo=mozilla&logoColor=white)](https://mozilla.github.io/pdf.js/)
   [![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white)](https://www.framer.com/motion/)
   [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
@@ -46,9 +46,10 @@ At its core, KlassroomAI features a **voice-first proactive tutor** powered by t
 | Feature | How it works |
 |---|---|
 | **Natural Conversation** | Students speak naturally; the AI responds in a warm, human-like voice with <500ms latency |
-| **True Barge-in** | Binary PCM audio streams via WebSockets allow instant interruption — say "Wait, explain that again" mid-sentence |
+| **Direct Client-to-Server** | Browser connects directly to Gemini Live API via ephemeral tokens — no backend proxy, no double-hop |
+| **True Barge-in** | Server-side VAD detects interruptions instantly — say "Wait, explain that again" mid-sentence |
 | **Contextual Awareness** | The tutor reads the current PDF page text, analyzes visible diagrams, and adapts its teaching in real-time |
-| **Precise Audio Scheduling** | Uses `AudioContext.currentTime` scheduling instead of event-loop queues to eliminate stuttering and lag |
+| **Secure by Design** | API key never leaves the backend — frontend uses short-lived, single-use ephemeral tokens |
 
 ### 🤖 Autonomous Agentic Behaviors
 The AI tutor isn't just a chatbot — it acts as an **autonomous orchestration agent** that decides when to use its tools:
@@ -96,7 +97,7 @@ Students input their exam date and available daily study hours:
 
 ## How we built it
 
-Our system is a decoupled **React Frontend** and **FastAPI Python Backend**, orchestrated via WebSockets for real-time streaming to the Gemini API. The full stack is deployed to **Google Cloud Run**.
+Our system is a decoupled **React Frontend** and **FastAPI Python Backend**. The voice tutor uses Google's recommended **client-to-server** architecture — the browser connects **directly** to the Gemini Live API via short-lived ephemeral tokens, eliminating the backend WebSocket proxy for minimal latency. Tool execution stays server-side via REST endpoints.
 
 ### System Architecture
 
@@ -107,13 +108,14 @@ graph TD
         PDF["PDF.js TextLayer"]
         WA["WebAudio API"]
         MIC["Mic Audio Stream"]
+        SDK["@google/genai SDK"]
     end
 
     subgraph Server["⚙️ FastAPI Backend - Cloud Run"]
-        WS["WebSocket Router"]
+        TOKEN["Ephemeral Token Endpoint"]
+        TOOLS["Tool Executor REST"]
         VIS["Vision API"]
         PLAN["Curriculum Route"]
-        AGT["Interactions Agent"]
     end
 
     subgraph Google["☁️ Google Cloud / Gemini"]
@@ -122,12 +124,14 @@ graph TD
         SEARCH["Google Search Grounding"]
     end
 
-    UI <-->|"WebSocket: PCM Audio + JSON"| WS
+    UI -->|"1. POST /api/ephemeral-token"| TOKEN
+    TOKEN -->|"2. Short-lived token"| UI
+    SDK <-->|"3. Direct WebSocket: PCM Audio"| LIVE
+    SDK -->|"4. Tool call received"| TOOLS
+    TOOLS -->|"5. Tool result"| SDK
     UI -->|"REST POST"| VIS
     UI -->|"REST POST"| PLAN
-    WS <-->|"LiveConnect Stream"| LIVE
     VIS --> GVIS
-    AGT --> GVIS
     LIVE <--> SEARCH
 ```
 
@@ -136,28 +140,28 @@ graph TD
 ```mermaid
 sequenceDiagram
     participant S as Student
-    participant F as Frontend
+    participant F as Frontend + @google/genai
     participant B as Backend
     participant G as Gemini Native Audio
 
     S->>F: Clicks "Start Tutor"
-    F->>B: WebSocket Connect
-    B->>G: LiveConnect Session
-    G-->>B: Session Ready
-    B-->>F: Connected
+    F->>B: POST /api/ephemeral-token
+    B-->>F: {token, model, expires_at}
+    F->>G: Direct WebSocket via ephemeral token
+    G-->>F: Session Ready
 
     loop Real-time Audio Loop
         S->>F: Speaks into Mic
-        F->>B: Binary PCM Audio (16kHz)
-        B->>G: send_realtime_input
-        G-->>B: Audio Response Chunks
-        B-->>F: Binary PCM Audio (24kHz)
-        F->>S: Plays via WebAudio Scheduler
+        F->>G: sendRealtimeInput (PCM 16kHz)
+        G-->>F: Audio Response + Transcription
+        F->>S: Plays via WebAudio (24kHz)
     end
 
     Note over G: Agent detects topic complete
-    G->>B: Tool Call: generate_quiz
+    G->>F: toolCall: generate_quiz
+    F->>B: POST /api/execute-tool
     B-->>F: Quiz Data JSON
+    F->>G: sendToolResponse
     F->>S: Quiz Panel Slides Out
 ```
 
@@ -185,7 +189,9 @@ KlassroomAI/
 │   ├── services/
 │   │   └── gemini_client.py        # Shared Gemini client
 │   └── routers/
-│       ├── live_session.py         # WebSocket ↔ Gemini Native Audio
+│       ├── ephemeral_token.py     # Mints short-lived tokens for Live API
+│       ├── tool_executor.py       # REST endpoint for tool execution
+│       ├── live_session.py        # Legacy WebSocket proxy (kept as fallback)
 │       ├── interactions.py         # Gemini 3 orchestrator agent
 │       ├── vision.py               # Page analysis + dictionary
 │       ├── visual_gen.py           # Image generation
@@ -205,10 +211,11 @@ KlassroomAI/
 
 | Challenge | Root Cause | Our Solution |
 |---|---|---|
-| **20-30s audio lag** | Recursive `onended` event-loop queuing on the main thread | Refactored to precise `AudioContext.currentTime` scheduling on the audio thread |
-| **1008 Policy Violation** | `speech_config` block unsupported by Native Audio preview models | Stripped config to minimal dict matching official Gemini Live API docs |
+| **Overengineered proxy** | Server-to-server WebSocket relay added latency + complexity + per-turn receive loop bug | Migrated to Google's recommended **client-to-server** architecture with ephemeral tokens |
+| **API key security** | Direct client connection risks exposing API key | Backend mints single-use, 1-min ephemeral tokens via `auth_tokens.create()` |
+| **20-30s audio lag** | Recursive `onended` event-loop queuing on main thread | Refactored to precise `AudioContext.currentTime` scheduling at 24kHz |
 | **PDF text misalignment** | Custom bounding-box detection was slow and inaccurate | Migrated to `pdf.js` native `TextLayer` for pixel-perfect DOM overlay |
-| **Barge-in trailing audio** | Old audio chunks kept playing after interruption | Added `interrupted` event handler that calls `.stop()` on all active `BufferSource` nodes |
+| **Tool calls in direct mode** | Tools need backend API key for Gemini calls | Frontend receives tool calls, POSTs to `/api/execute-tool`, sends results back to Gemini |
 
 ---
 
@@ -224,7 +231,7 @@ KlassroomAI/
 
 ## What we learned
 
-- The incredible power (and difficulty) of managing **asynchronous binary WebSockets** for real-time PCM audio streaming
+- The **client-to-server** pattern with ephemeral tokens is both simpler and faster than backend WebSocket proxying
 - How to orchestrate **multi-model agent handoffs** — using Gemini-3-Flash for orchestration and Native Audio for the real-time voice loop
 - **WebAudio scheduling** is critical for smooth playback — never rely on `onended` callbacks for real-time audio
 - Practical experience in **automated cloud deployments** via Google Cloud Run and `cloudbuild.yaml`
@@ -326,7 +333,7 @@ After spinning up the app, here's how judges can test every feature:
 | **Live App** | [https://klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app) |
 | **Health Check** | [/health](https://klassroom-api-vav7hon2rq-uc.a.run.app/health) |
 | **Infrastructure-as-Code** | [`cloudbuild.yaml`](./cloudbuild.yaml) + [`Dockerfile`](./backend/Dockerfile) |
-| **Google Cloud API Usage** | [`live_session.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/live_session.py) — Gemini LiveConnect WebSocket API calls · [`gemini_client.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/services/gemini_client.py) — Gemini client init · [`interactions.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/interactions.py) — Agentic tool orchestration |
+| **Google Cloud API Usage** | [`ephemeral_token.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/ephemeral_token.py) — Ephemeral token minting · [`tool_executor.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/tool_executor.py) — Tool execution · [`VoiceControls.jsx`](https://github.com/inareshmatta/klassroom-ai/blob/main/frontend/src/components/LeftPanel/VoiceControls.jsx) — Direct Gemini Live API connection · [`interactions.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/interactions.py) — Agentic tool orchestration |
 | **Cloud Console** | [Cloud Run Dashboard](https://console.cloud.google.com/run/detail/us-central1/klassroom-api?project=alert-nimbus-482707-p6) |
 
 ---
