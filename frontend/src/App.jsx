@@ -55,11 +55,13 @@ export default function App() {
   // Curriculum Planner state
   const [plannerOpen, setPlannerOpen] = useState(false)
 
+  // Sidebar Toggle State
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true)
+  const [rightPanelOpen, setRightPanelOpen] = useState(true)
+
   // Tutor settings
   const [settings, setSettings] = useState({
     voice: 'Kore',
-    language: 'English',
-    grade: '10',
     affectiveMode: true,
     bargeIn: true,
   })
@@ -158,10 +160,21 @@ export default function App() {
         onEndSession={() => setSession(s => ({ ...s, isLive: false, orbState: 'idle' }))}
       />
 
-      <div className="app-body">
-        <LeftPanel
-          session={session}
-          setSession={setSession}
+      <div className={`app-body ${!leftPanelOpen ? 'left-closed' : ''} ${!rightPanelOpen ? 'right-closed' : ''}`}>
+        
+        {/* Left Toggle Button (desktop only) */}
+        <button 
+          className="sidebar-toggle left-toggle" 
+          onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+          title={leftPanelOpen ? "Collapse Menu" : "Expand Menu"}
+        >
+          {leftPanelOpen ? '◀' : '▶'}
+        </button>
+
+        <div className={`panel-container left-container ${!leftPanelOpen ? 'collapsed' : ''}`}>
+          <LeftPanel
+            session={session}
+            setSession={setSession}
           books={books}
           activeBook={activeBook}
           addBook={addBook}
@@ -172,10 +185,11 @@ export default function App() {
           pageAnalysis={pageAnalysis}
           onOpenVisualPanel={openVisualPanel}
           onOpenAssessment={() => setAssessmentOpen(true)}
-          onOpenPlanner={() => setPlannerOpen(true)}
-          appendTranscript={appendTranscript}
-          currentPage={currentPage}
-        />
+            onOpenPlanner={() => setPlannerOpen(true)}
+            appendTranscript={appendTranscript}
+            currentPage={currentPage}
+          />
+        </div>
 
         <CenterCanvas
           book={activeBook}
@@ -192,13 +206,24 @@ export default function App() {
           transcript={transcript}
         />
 
-        <RightPanel
-          pageAnalysis={pageAnalysis}
-          currentPage={currentPage}
+        {/* Right Toggle Button (desktop only) */}
+        <button 
+          className="sidebar-toggle right-toggle" 
+          onClick={() => setRightPanelOpen(!rightPanelOpen)}
+          title={rightPanelOpen ? "Collapse Vault" : "Expand Vault"}
+        >
+          {rightPanelOpen ? '▶' : '◀'}
+        </button>
+
+        <div className={`panel-container right-container ${!rightPanelOpen ? 'collapsed' : ''}`}>
+          <RightPanel
+            pageAnalysis={pageAnalysis}
+            currentPage={currentPage}
           subject={activeBook?.subject || 'General'}
-          appendTranscript={appendTranscript}
-          onOpenAssessment={() => setAssessmentOpen(true)}
-        />
+            appendTranscript={appendTranscript}
+            onOpenAssessment={() => setAssessmentOpen(true)}
+          />
+        </div>
       </div>
 
       {/* Full-screen overlays */}

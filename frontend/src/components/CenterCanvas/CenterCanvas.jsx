@@ -107,7 +107,7 @@ export default function CenterCanvas({
     }
 
     return (
-        <main className="center-canvas" ref={containerRef}>
+        <main className={`center-canvas ${session.orbState === 'speaking' ? 'is-speaking' : ''}`} ref={containerRef}>
             {/* AI Orb */}
             <div className="orb-wrapper">
                 <AIPresenceOrb state={session.orbState} />

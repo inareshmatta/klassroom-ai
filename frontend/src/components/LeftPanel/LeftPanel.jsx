@@ -52,29 +52,6 @@ export default function LeftPanel({
                 </div>
                 <div className="lp-settings">
                     <div className="lp-field">
-                        <label className="lp-label">Language</label>
-                        <select id="sel-language" className="input"
-                            value={settings.language}
-                            onChange={e => setSettings(s => ({ ...s, language: e.target.value }))}>
-                            {['English', 'Hindi', 'Spanish', 'French', 'German', 'Arabic', 'Chinese', 'Japanese',
-                                'Korean', 'Portuguese', 'Russian', 'Bengali', 'Tamil', 'Telugu', 'Urdu'].map(l => (
-                                    <option key={l}>{l}</option>
-                                ))}
-                        </select>
-                    </div>
-
-                    <div className="lp-field">
-                        <label className="lp-label">Grade level</label>
-                        <select id="sel-grade" className="input"
-                            value={settings.grade}
-                            onChange={e => setSettings(s => ({ ...s, grade: e.target.value }))}>
-                            {['6', '7', '8', '9', '10', '11', '12', 'Undergraduate', 'Graduate'].map(g => (
-                                <option key={g} value={g}>Grade {g}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="lp-field">
                         <label className="lp-label">AI Voice</label>
                         <select id="sel-voice" className="input"
                             value={settings.voice}

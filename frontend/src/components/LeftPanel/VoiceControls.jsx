@@ -110,14 +110,12 @@ export default function VoiceControls({
 
         // Build config
         const subject = bookRef.current?.subject || 'General'
-        const grade = settingsRef.current.grade
-        const language = settingsRef.current.language
         const voice = settingsRef.current.voice
         const pageText = pageAnalysisRef.current?.full_text?.slice(0, 2000) || ''
 
-        const systemInstruction = `You are Klassbook AI, an expert ${subject} tutor for Grade ${grade} students.
-You should default to speaking in ${language}. 
-However, if the student speaks a different language or explicitly asks you to change languages, you MUST switch to their requested language immediately and seamlessly.
+        const systemInstruction = `You are Klassbook AI, an expert ${subject} tutor for High School students.
+You MUST ALWAYS speak in English by default. 
+DO NOT switch languages or accents unless the user explicitly asks you to (e.g., "Speak in Spanish" or "Can we practice French?"). Even if the user says a single word in another language by accident, remain in English unless formally requested to switch.
 
 The student is currently looking at the following textbook page content:
 """

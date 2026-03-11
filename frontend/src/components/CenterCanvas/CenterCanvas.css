@@ -190,3 +190,31 @@
         transform: translateY(0);
     }
 }
+
+/* ═══ Speaking Active Glow State ═══ */
+.center-canvas.is-speaking {
+    position: relative;
+    box-shadow: 0 0 30px rgba(var(--clr-primary-rgb), 0.15) inset;
+    animation: canvas-pulse 2s ease-in-out infinite;
+}
+
+.center-canvas.is-speaking::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 2px solid var(--clr-primary);
+    border-radius: var(--radius-lg);
+    opacity: 0.5;
+    animation: canvas-border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes canvas-pulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(var(--clr-primary-rgb), 0.1) inset; }
+    50% { box-shadow: 0 0 50px rgba(var(--clr-primary-rgb), 0.25) inset; }
+}
+
+@keyframes canvas-border-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.002); }
+}
