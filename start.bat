@@ -18,8 +18,12 @@ timeout /t 1 /nobreak >nul
 :: Build frontend
 echo [2/4] Building frontend...
 cd /d "%~dp0frontend"
-call npm ci >nul 2>&1
-call npx -y vite build
+if not exist "node_modules\" (
+    echo Installing frontend dependencies...
+    call npm install
+)
+echo Compiling frontend...
+call npm run build
 
 :: Copy frontend build to backend static folder
 echo.

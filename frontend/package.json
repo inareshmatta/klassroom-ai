@@ -14,6 +14,7 @@
     "firebase": "^12.10.0",
     "framer-motion": "^12.34.3",
     "pdfjs-dist": "^5.5.207",
+    "playwright": "^1.58.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "uuid": "^13.0.0"

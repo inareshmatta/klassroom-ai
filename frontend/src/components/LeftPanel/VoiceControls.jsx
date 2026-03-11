@@ -119,19 +119,30 @@ export default function VoiceControls({
 You should default to speaking in ${language}. 
 However, if the student speaks a different language or explicitly asks you to change languages, you MUST switch to their requested language immediately and seamlessly.
 
-Be conversational, use the student's name if they give it, and make learning fun!`
+The student is currently looking at the following textbook page content:
+"""
+${pageText}
+"""
+
+CRITICAL INSTRUCTIONS:
+- You are equipped with tools (dictionary, quiz, visual generator).
+- When asked to explain a concept visually, you MUST call 'generate_visual'.
+- When asked for a definition or what a word means, you MUST call 'lookup_word'.
+- When discussing complex topics, proactively generate diagrams using 'generate_visual'.
+- Do NOT just talk about these things; actually execute the tool call!
+- Be conversational, use the student's name if they give it, and make learning fun!`
 
         const tools = [{
             functionDeclarations: [
-                { name: "generate_quiz", description: "Generate quiz questions to test student understanding", parameters: { type: "object", properties: { topic: { type: "string" }, num_questions: { type: "integer" }, quiz_type: { type: "string" } }, required: ["topic"] } },
-                { name: "lookup_word", description: "Look up definition, pronunciation, and etymology of a word", parameters: { type: "object", properties: { word: { type: "string" }, subject: { type: "string" } }, required: ["word"] } },
-                { name: "generate_visual", description: "Generate a visual diagram to explain a concept", parameters: { type: "object", properties: { topic: { type: "string" }, visual_type: { type: "string" } }, required: ["topic"] } },
-                { name: "create_bookmark", description: "Save an important concept for revision", parameters: { type: "object", properties: { text: { type: "string" } }, required: ["text"] } },
-                { name: "suggest_next_topic", description: "Suggest what to study next", parameters: { type: "object", properties: { current_topic: { type: "string" } }, required: ["current_topic"] } },
-                { name: "summarize_page", description: "Create a bullet-point summary of the current page", parameters: { type: "object", properties: { page_text: { type: "string" }, max_points: { type: "integer" } }, required: ["page_text"] } },
-                { name: "explain_like_im_5", description: "Simplify a complex concept for a 5-year-old", parameters: { type: "object", properties: { concept: { type: "string" } }, required: ["concept"] } },
-                { name: "compare_concepts", description: "Compare two concepts side-by-side", parameters: { type: "object", properties: { concept_a: { type: "string" }, concept_b: { type: "string" } }, required: ["concept_a", "concept_b"] } },
-                { name: "generate_flashcards", description: "Generate revision flashcards on a topic", parameters: { type: "object", properties: { topic: { type: "string" }, num_cards: { type: "integer" } }, required: ["topic"] } },
+                { name: "generate_quiz", description: "Generate quiz questions to test student understanding", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, num_questions: { type: "INTEGER" }, quiz_type: { type: "STRING" } }, required: ["topic"] } },
+                { name: "lookup_word", description: "Look up definition, pronunciation, and etymology of a word", parameters: { type: "OBJECT", properties: { word: { type: "STRING" }, subject: { type: "STRING" } }, required: ["word"] } },
+                { name: "generate_visual", description: "Generate a visual diagram to explain a concept", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, visual_type: { type: "STRING" } }, required: ["topic"] } },
+                { name: "create_bookmark", description: "Save an important concept for revision", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+                { name: "suggest_next_topic", description: "Suggest what to study next", parameters: { type: "OBJECT", properties: { current_topic: { type: "STRING" } }, required: ["current_topic"] } },
+                { name: "summarize_page", description: "Create a bullet-point summary of the current page", parameters: { type: "OBJECT", properties: { page_text: { type: "STRING" }, max_points: { type: "INTEGER" } }, required: ["page_text"] } },
+                { name: "explain_like_im_5", description: "Simplify a complex concept for a 5-year-old", parameters: { type: "OBJECT", properties: { concept: { type: "STRING" } }, required: ["concept"] } },
+                { name: "compare_concepts", description: "Compare two concepts side-by-side", parameters: { type: "OBJECT", properties: { concept_a: { type: "STRING" }, concept_b: { type: "STRING" } }, required: ["concept_a", "concept_b"] } },
+                { name: "generate_flashcards", description: "Generate revision flashcards on a topic", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, num_cards: { type: "INTEGER" } }, required: ["topic"] } },
             ]
         }]
 
@@ -191,15 +202,25 @@ Be conversational, use the student's name if they give it, and make learning fun
 
                                 // Interrupted
                                 if (message.serverContent.interrupted) {
+                                    isInterruptedRef.current = true
                                     stopAudio()
-                                    isInterruptedRef.current = false
                                 }
                             }
 
                             // Tool calls — execute via backend REST
+                            // In SDK v1.43+, tool calls arrive in modelTurn.parts
+                            let functionCalls = []
                             if (message.toolCall) {
+                                functionCalls = message.toolCall.functionCalls || []
+                            } else if (message.serverContent?.modelTurn?.parts) {
+                                functionCalls = message.serverContent.modelTurn.parts
+                                    .filter(p => p.functionCall)
+                                    .map(p => p.functionCall)
+                            }
+
+                            if (functionCalls.length > 0) {
                                 const functionResponses = []
-                                for (const fc of message.toolCall.functionCalls) {
+                                for (const fc of functionCalls) {
                                     const toolEmoji = {
                                         generate_quiz: '📝', lookup_word: '📖',
                                         generate_visual: '🎨', create_bookmark: '🔖',
@@ -264,9 +285,9 @@ Be conversational, use the student's name if they give it, and make learning fun
             // Send a short greeting utilizing the JS SDK `sendClientContent` method explicitly
             geminiSession.sendClientContent({ turns: "Hi! I just opened my textbook. I'm ready to learn — introduce yourself briefly and ask what I need help with.", turnComplete: true })
 
-            // 3. Setup mic
+            // 3. Setup mic without forcing strict sampleRate, AudioContext resamples automatically
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { sampleRate: SEND_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+                audio: { echoCancellation: true, noiseSuppression: true }
             })
             streamRef.current = stream
             audioCtxRef.current = new AudioContext({ sampleRate: SEND_SAMPLE_RATE })
