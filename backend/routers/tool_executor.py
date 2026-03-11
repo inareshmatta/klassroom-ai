@@ -63,9 +63,24 @@ def _execute(name: str, args: dict, client) -> dict:
             config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
         try:
-            parsed = json.loads(response.text)
-        except (json.JSONDecodeError, TypeError):
+            text = response.text
+            if text.startswith("```json"):
+                text = text.split("```json")[1]
+            if text.startswith("```"):
+                text = text.split("```")[1]
+            if text.endswith("```"):
+                text = text.rsplit("```", 1)[0]
+                
+            parsed = json.loads(text.strip())
+            
+            # Sometimes models return {"quiz": {"questions": [...]}} or just {"questions": [...]}
+            if "quiz" in parsed and "questions" in parsed["quiz"]:
+                parsed = parsed["quiz"]
+                
+        except (json.JSONDecodeError, TypeError, Exception) as e:
+            print(f"[QUIZ PARSE ERROR] {e}: {response.text}")
             parsed = {"questions": [], "raw": response.text}
+            
         return {"quiz": parsed, "tool": "generate_quiz"}
 
     elif name == "lookup_word":
