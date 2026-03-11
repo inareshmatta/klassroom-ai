@@ -5,6 +5,7 @@ Uses in-memory storage. Real API calls with Gemini embeddings and generation.
 import json
 from fastapi import APIRouter, Form
 from services.gemini_client import get_client
+from config.models import TEXT_MODEL
 
 router = APIRouter(prefix="/api")
 
@@ -72,7 +73,7 @@ async def generate_revision_sheet(
     """Generate a revision sheet from saved bookmarks using Gemini."""
     client = get_client()
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model=TEXT_MODEL,
         contents=[
             f"""You are a study assistant. Create a concise revision sheet from these saved highlights.
 

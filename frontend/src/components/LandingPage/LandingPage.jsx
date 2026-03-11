@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import './LandingPage.css';
 
-export default function LandingPage({ onEnter }) {
+export default function LandingPage({ onEnter, theme, toggleTheme }) {
     return (
         <div className="landing-container">
             {/* Background Orbs Elements */}
@@ -16,9 +16,12 @@ export default function LandingPage({ onEnter }) {
             <header className="landing-nav">
                 <div className="nav-logo">
                     <span className="nav-icon">📚</span>
-                    <span className="nav-title">KlassroomAI</span>
+                    <span className="nav-title">Klassbook AI</span>
                 </div>
                 <div className="nav-actions">
+                    <button className="btn-icon btn-ghost" onClick={toggleTheme} title="Toggle Theme" style={{ marginRight: 12 }}>
+                        {theme === 'light' ? '🌙' : '☀️'}
+                    </button>
                     <button className="btn-nav-cta" onClick={onEnter}>
                         Open App
                     </button>
@@ -64,7 +67,7 @@ export default function LandingPage({ onEnter }) {
                                 <i className="dot yellow"></i>
                                 <i className="dot green"></i>
                             </div>
-                            <img src="/assets/main_app.png" alt="KlassroomAI Main Interface" className="mockup-img" />
+                            <img src="/assets/main_app.png" alt="Klassbook AI Main Interface" className="mockup-img" />
                         </div>
                     </motion.div>
                 </section>
@@ -137,7 +140,7 @@ export default function LandingPage({ onEnter }) {
                             <div className="feature-badge">📝 Test Your Knowledge</div>
                             <h2>Targeted Smart Assessments</h2>
                             <p>
-                                Don't just read—test your understanding instantly. KlassroomAI generates custom quizzes and revision flashcards
+                                Don't just read—test your understanding instantly. Klassbook AI generates custom quizzes and revision flashcards
                                 based exactly on the specific textbook pages and topics you are currently studying.
                             </p>
                         </motion.div>
@@ -163,7 +166,7 @@ export default function LandingPage({ onEnter }) {
                         viewport={{ once: true }}
                     >
                         <h2>Ready to boost your grades?</h2>
-                        <p>Join thousands of students learning smarter with KlassroomAI.</p>
+                        <p>Join thousands of students learning smarter with Klassbook AI.</p>
                         <button className="btn-primary-cta" onClick={onEnter}>
                             Enter the Classroom
                         </button>
@@ -174,10 +177,10 @@ export default function LandingPage({ onEnter }) {
             <footer className="landing-footer">
                 <div className="footer-content">
                     <div className="footer-logo">
-                        <span>📚 KlassroomAI</span>
+                        <span>📚 Klassbook AI</span>
                     </div>
                     <div className="footer-links">
-                        <span>© 2026 KlassroomAI</span>
+                        <span>© 2026 Klassbook AI</span>
                     </div>
                 </div>
             </footer>

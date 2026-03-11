@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from services.gemini_client import get_client
 from google.genai import types
+from config.models import TEXT_MODEL
 
 router = APIRouter()
 
@@ -62,7 +63,7 @@ Make the tasks specific and actionable. Include 4 personalized study tips."""
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-05-20",
+            model=TEXT_MODEL,
             contents=[prompt],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

@@ -1,5 +1,5 @@
 /* ================================================================
-   ClassbookAI — Premium Design System v2
+   Klassbook AI — Premium Design System v2
    Dark-first, glassmorphism, Gemini-inspired
    SaaS-grade aesthetics — NOT a student project
    ================================================================ */
@@ -7,6 +7,65 @@
 /* ---------- CSS Custom Properties ---------- */
 :root {
   /* Brand: Deep space navy + Electric accent spectrum */
+  /* Default: LIGHT MODE */
+  --clr-bg: #f8fafc;
+  --clr-bg-2: #f1f5f9;
+  --clr-bg-3: #ffffff;
+  --clr-surface: rgba(0, 0, 0, 0.02);
+  --clr-surface-1: rgba(0, 0, 0, 0.04);
+  --clr-surface-2: rgba(0, 0, 0, 0.06);
+  --clr-border: rgba(0, 0, 0, 0.08);
+  --clr-border-1: rgba(0, 0, 0, 0.12);
+  --clr-border-2: rgba(0, 0, 0, 0.18);
+
+  /* Brand gradient anchors */
+  --clr-primary: #4F46E5;
+  --clr-primary-light: #6366F1;
+  --clr-primary-glow: rgba(79, 70, 229, 0.25);
+  --clr-accent: #9333EA;
+  --clr-accent-glow: rgba(147, 51, 234, 0.25);
+  --clr-teal: #0D9488;
+  --clr-teal-glow: rgba(13, 148, 136, 0.2);
+  --clr-green: #10B981;
+  --clr-green-glow: rgba(16, 185, 129, 0.2);
+  --clr-amber: #F59E0B;
+  --clr-amber-glow: rgba(245, 158, 11, 0.2);
+  --clr-coral: #E11D48;
+  --clr-coral-glow: rgba(225, 29, 72, 0.2);
+  --clr-rose: #EC4899;
+
+  /* Text - Dark text for light mode */
+  --clr-text: #0f172a;
+  --clr-text-2: #334155;
+  --clr-text-muted: #64748b;
+  --clr-text-dim: #94a3b8;
+
+  /* Highlights */
+  --clr-hl-yellow: rgba(245, 158, 11, 0.12);
+  --clr-hl-green: rgba(16, 185, 129, 0.12);
+  --clr-hl-blue: rgba(79, 70, 229, 0.12);
+  --clr-hl-pink: rgba(236, 72, 153, 0.12);
+  --clr-hl-orange: rgba(225, 29, 72, 0.12);
+
+  /* Brand gradient */
+  --gradient-brand: linear-gradient(135deg, var(--clr-primary), var(--clr-accent), var(--clr-teal));
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%);
+  --gradient-glow: linear-gradient(135deg, var(--clr-primary-glow), var(--clr-accent-glow));
+
+  /* Timing */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Spacing */
+  --panel-gap: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+}
+
+[data-theme="dark"] {
+  /* DARK MODE (Previously default) */
   --clr-bg: #06080f;
   --clr-bg-2: #0c1018;
   --clr-bg-3: #111722;
@@ -17,7 +76,6 @@
   --clr-border-1: rgba(255, 255, 255, 0.10);
   --clr-border-2: rgba(255, 255, 255, 0.16);
 
-  /* Brand gradient anchors */
   --clr-primary: #6C8EF2;
   --clr-primary-light: #8EAAFF;
   --clr-primary-glow: rgba(108, 142, 242, 0.25);
@@ -31,36 +89,19 @@
   --clr-amber-glow: rgba(251, 191, 36, 0.2);
   --clr-coral: #FB7185;
   --clr-coral-glow: rgba(251, 113, 133, 0.2);
-  --clr-rose: #F472B6;
-
-  /* Text */
+  
   --clr-text: #E8ECF4;
   --clr-text-2: #C0C7D8;
   --clr-text-muted: #6B7A99;
   --clr-text-dim: #3D4A66;
 
-  /* Highlights */
   --clr-hl-yellow: rgba(251, 191, 36, 0.22);
   --clr-hl-green: rgba(52, 211, 153, 0.22);
   --clr-hl-blue: rgba(108, 142, 242, 0.22);
   --clr-hl-pink: rgba(244, 114, 182, 0.22);
   --clr-hl-orange: rgba(251, 113, 133, 0.22);
 
-  /* Brand gradient */
-  --gradient-brand: linear-gradient(135deg, var(--clr-primary), var(--clr-accent), var(--clr-teal));
   --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-  --gradient-glow: linear-gradient(135deg, var(--clr-primary-glow), var(--clr-accent-glow));
-
-  /* Timing */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Spacing */
-  --panel-gap: 10px;
-  --radius: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
 }
 
 /* ---------- Reset & Base ---------- */

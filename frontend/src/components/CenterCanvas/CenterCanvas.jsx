@@ -27,6 +27,23 @@ export default function CenterCanvas({
             full_text: pageText || prev?.full_text || '',
         }))
 
+        // Dispatch event so live session can share this page with Gemini
+        if (session.isLive) {
+            try {
+                const canvas = document.getElementById('pdf-canvas')
+                if (canvas) {
+                    const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1]
+                    window.dispatchEvent(new CustomEvent('page-changed-live', {
+                        detail: {
+                            pageNumber: currentPage,
+                            pageText: pageText || '',
+                            imageBase64: base64,
+                        }
+                    }))
+                }
+            } catch (e) { console.warn('Could not dispatch page-changed-live:', e) }
+        }
+
         setAnalyzing(true)
         try {
             const fd = new FormData()
@@ -43,7 +60,7 @@ export default function CenterCanvas({
         } finally {
             setAnalyzing(false)
         }
-    }, [book, currentPage, setPageAnalysis])
+    }, [book, currentPage, setPageAnalysis, session.isLive])
 
     // Word click → dictionary lookup (works with or without backend)
     const handleWordClick = useCallback(async (word, pageX, pageY) => {

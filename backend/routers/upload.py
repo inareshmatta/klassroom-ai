@@ -4,6 +4,7 @@ import tempfile
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from services.gemini_client import get_client
 from google.genai import types
+from config.models import TEXT_MODEL
 
 router = APIRouter(prefix="/api")
 
@@ -53,7 +54,7 @@ async def analyze_book_structure(
     client = get_client()
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model=TEXT_MODEL,
         contents=[
             {"file_data": {"file_uri": file_uri, "mime_type": mime_type}},
             """Analyze this textbook and return JSON with these exact keys:

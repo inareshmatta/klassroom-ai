@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Deployment script for KlassroomAI to Google Cloud Run
+# Deployment script for Klassbook AI to Google Cloud Run
 
 echo "========================================"
-echo "  Deploying KlassroomAI to Cloud Run"
+echo "  Deploying Klassbook AI to Cloud Run"
 echo "========================================"
 echo ""
 

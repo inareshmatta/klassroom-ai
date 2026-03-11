@@ -11,6 +11,16 @@ import TopBar from './components/TopBar'
 import './App.css'
 
 export default function App() {
+  // Theme state
+  const [theme, setTheme] = useState(() => localStorage.getItem('klassroom_theme') || 'light')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('klassroom_theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light')
+
   // Landing page state
   const [hasEntered, setHasEntered] = useState(false)
 
@@ -135,7 +145,7 @@ export default function App() {
   }, [openVisualPanel, onVisualGenerated])
 
   if (!hasEntered) {
-    return <LandingPage onEnter={() => setHasEntered(true)} />
+    return <LandingPage onEnter={() => setHasEntered(true)} theme={theme} toggleTheme={toggleTheme} />
   }
 
   return (
@@ -143,6 +153,8 @@ export default function App() {
       <TopBar
         books={books}
         session={session}
+        theme={theme}
+        toggleTheme={toggleTheme}
         onEndSession={() => setSession(s => ({ ...s, isLive: false, orbState: 'idle' }))}
       />
 

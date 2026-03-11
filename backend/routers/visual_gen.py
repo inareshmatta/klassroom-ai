@@ -3,6 +3,7 @@ import io
 from fastapi import APIRouter, Form, UploadFile, File
 from google.genai import types
 from services.gemini_client import get_client
+from config.models import IMAGE_MODEL
 
 router = APIRouter(prefix="/api")
 
@@ -17,7 +18,7 @@ def _get_chat(session_id: str, quality: str = "fast"):
     quality="speed"→ gemini-2.5-flash-image (Nano Banana — bulk/quick)
     """
     model_map = {
-        "fast": "gemini-3.1-flash-image-preview",
+        "fast": IMAGE_MODEL,  # Nano Banana 2 (default)
         "pro": "gemini-3-pro-image-preview",
         "speed": "gemini-2.5-flash-image",
     }
@@ -108,7 +109,7 @@ async def generate_visual(
                 "mime_type": part.inline_data.mime_type,
                 "alt_text": f"{visual_type}: {topic}",
                 "session_id": session_id,
-                "model": "gemini-3.1-flash-image-preview" if quality == "fast" else quality,
+                "model": IMAGE_MODEL if quality == "fast" else quality,
             }
 
     return {"error": "No image generated", "text": next((p.text for p in response.parts if p.text), "")}
@@ -154,7 +155,7 @@ async def generate_from_page(
     page_image = PILImage.open(io.BytesIO(image_bytes))
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash-image",
+        model=IMAGE_MODEL,
         contents=[instruction, page_image],
         config=types.GenerateContentConfig(
             response_modalities=["TEXT", "IMAGE"],

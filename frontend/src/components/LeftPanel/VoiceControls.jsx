@@ -115,7 +115,7 @@ export default function VoiceControls({
         const voice = settingsRef.current.voice
         const pageText = pageAnalysisRef.current?.full_text?.slice(0, 2000) || ''
 
-        const systemInstruction = `You are KlassroomAI, an expert ${subject} tutor for Grade ${grade} students.
+        const systemInstruction = `You are Klassbook AI, an expert ${subject} tutor for Grade ${grade} students.
 You should default to speaking in ${language}. 
 However, if the student speaks a different language or explicitly asks you to change languages, you MUST switch to their requested language immediately and seamlessly.
 
@@ -123,6 +123,10 @@ The student is currently looking at the following textbook page content:
 """
 ${pageText}
 """
+
+You will receive the page image whenever the student navigates to a new page. You can SEE the page they are reading.
+When the student asks about something on "this page" or "the current page", refer to the most recent page image and text you received.
+Always be aware of which page the student is on and reference specific content from that page.
 
 CRITICAL INSTRUCTIONS:
 - You are equipped with tools (dictionary, quiz, visual generator).
@@ -282,6 +286,15 @@ CRITICAL INSTRUCTIONS:
             setSession(s => ({ ...s, isLive: true, orbState: 'listening' }))
             appendTranscript('system', '🎙 Connected — speak to your AI tutor!')
 
+            // Send initial page image so the AI can see what the student is reading
+            try {
+                const canvas = document.getElementById('pdf-canvas')
+                if (canvas) {
+                    const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1]
+                    geminiSession.sendRealtimeInput({ video: { mimeType: 'image/jpeg', data: base64 } })
+                }
+            } catch (e) { console.warn('[LIVE] Could not send initial page image:', e) }
+
             // Send a short greeting utilizing the JS SDK `sendClientContent` method explicitly
             geminiSession.sendClientContent({ turns: "Hi! I just opened my textbook. I'm ready to learn — introduce yourself briefly and ask what I need help with.", turnComplete: true })
 
@@ -341,6 +354,56 @@ CRITICAL INSTRUCTIONS:
         setSession(s => ({ ...s, isLive: false, orbState: 'idle' }))
         setMicLevel(0)
     }, [setSession])
+
+    // ═══════════════════════════════════════════════
+    // Live page-change bridge: send current page to Gemini when user navigates
+    // ═══════════════════════════════════════════════
+    useEffect(() => {
+        if (!session.isLive) return
+
+        const handlePageChanged = (e) => {
+            const gs = sessionRef.current
+            if (!gs) return
+
+            const { pageNumber, pageText, imageBase64 } = e.detail || {}
+
+            // Send page image so Gemini can SEE the page
+            if (imageBase64) {
+                try {
+                    gs.sendRealtimeInput({ video: { mimeType: 'image/jpeg', data: imageBase64 } })
+                    console.log(`[LIVE] Sent page ${pageNumber} image to Gemini`)
+                } catch (err) { console.warn('[LIVE] Failed to send page image:', err) }
+            }
+
+            // Send text context update so Gemini knows the page number and text
+            const contextMsg = `[The student just turned to page ${pageNumber}. Here is the text content of this page:]\n${(pageText || '').slice(0, 2000)}`
+            try {
+                gs.sendClientContent({ turns: contextMsg, turnComplete: true })
+                console.log(`[LIVE] Sent page ${pageNumber} text context to Gemini`)
+            } catch (err) { console.warn('[LIVE] Failed to send page context:', err) }
+
+            appendTranscript('system', `📄 Page ${pageNumber} shared with AI tutor`)
+        }
+
+        // Also handle manual "Explain Page" button clicks
+        const handleVisionFrame = (e) => {
+            const gs = sessionRef.current
+            if (!gs) return
+            const base64 = e.detail
+            if (base64) {
+                try {
+                    gs.sendRealtimeInput({ video: { mimeType: 'image/jpeg', data: base64 } })
+                } catch (err) { console.warn('[LIVE] Failed to send vision frame:', err) }
+            }
+        }
+
+        window.addEventListener('page-changed-live', handlePageChanged)
+        window.addEventListener('send-vision-frame', handleVisionFrame)
+        return () => {
+            window.removeEventListener('page-changed-live', handlePageChanged)
+            window.removeEventListener('send-vision-frame', handleVisionFrame)
+        }
+    }, [session.isLive, appendTranscript])
 
     return (
         <div className="voice-controls">

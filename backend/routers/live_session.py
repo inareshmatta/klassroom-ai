@@ -26,10 +26,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from google import genai
 from google.genai import types
 from services.gemini_client import get_client
+from config.models import TEXT_MODEL, IMAGE_MODEL, LIVE_MODEL
 
 router = APIRouter()
-
-LIVE_MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 
 # ═══════════════════════════════════════════════
 # Tool Declarations — Gemini decides when to call
@@ -211,7 +210,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         diff = args.get("difficulty", 3)
 
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model=TEXT_MODEL,
             contents=[
                 f"Generate {num} {qtype} questions about '{topic}' at difficulty {diff}/5. "
                 f"Return JSON with 'questions' array. Each has: question, options (4), correct_index, explanation."
@@ -225,7 +224,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         subject = args.get("subject", "General")
 
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model=TEXT_MODEL,
             contents=[
                 f'Define "{word}" for a {subject} student. Return JSON: '
                 f'ipa, pronunciation_guide, etymology, subject_definition, simple_analogy, related_terms (4).'
@@ -242,7 +241,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         vtype = args.get("visual_type", "diagram")
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash-image",  # Nano Banana for image gen
+            model=IMAGE_MODEL,  # Nano Banana 2
             contents=[
                 f"Create a clear, educational {vtype} about '{topic}'. "
                 f"Style: clean, labeled, colorful, textbook-quality."
@@ -272,7 +271,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
     elif name == "suggest_next_topic":
         current = args.get("current_topic", "")
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model=TEXT_MODEL,
             contents=[
                 f"Student just studied '{current}'. Suggest the 3 best next topics "
                 f"in logical learning order. Return JSON: topics (array of strings), reason (string)."
@@ -286,7 +285,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         max_points = min(args.get("max_points", 5), 8)
 
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model=TEXT_MODEL,
             contents=[
                 f"Summarize this page into {max_points} concise bullet points. "
                 f"Focus on key concepts, definitions, and important facts.\n\nPage text:\n{page_text[:3000]}"
@@ -300,7 +299,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         subject = args.get("subject", "General")
 
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model=TEXT_MODEL,
             contents=[
                 f'Explain "{concept}" ({subject}) like I\'m 5 years old. '
                 f'Use a fun everyday analogy. Return JSON: simple_explanation, analogy, fun_fact.'
@@ -315,7 +314,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         subject = args.get("subject", "General")
 
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model=TEXT_MODEL,
             contents=[
                 f'Compare "{a}" vs "{b}" in {subject}. Return JSON: '
                 f'similarities (array of strings), differences (array of objects with a, b keys), '
@@ -330,7 +329,7 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         num = min(args.get("num_cards", 5), 10)
 
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model=TEXT_MODEL,
             contents=[
                 f"Create {num} study flashcards about '{topic}'. "
                 f"Return JSON with 'cards' array. Each card has: front (question/term), "

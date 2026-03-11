@@ -10,6 +10,7 @@ import json
 from fastapi import APIRouter, Form, HTTPException
 from google.genai import types
 from services.gemini_client import get_client
+from config.models import TEXT_MODEL, DEEP_RESEARCH_MODEL
 
 router = APIRouter(prefix="/api")
 
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/api")
 # Production: store in Firestore
 _session_interactions: dict[str, str] = {}
 
-ORCHESTRATOR_SYSTEM = """You are ClassbookAI's session orchestrator.
+ORCHESTRATOR_SYSTEM = """You are Klassbook AI's session orchestrator.
 You manage the study session by:
 1. Analyzing uploaded textbook content
 2. Maintaining context across the entire session
@@ -57,7 +58,7 @@ async def start_interaction(
     client = get_client()
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model=TEXT_MODEL,
         contents=[
             f"""New study session started.
 Subject: {subject}
@@ -80,7 +81,7 @@ What order should the student study them? Any prerequisites?"""
     return {
         "session_id": session_id,
         "orchestrator_response": result,
-        "model": "gemini-3-flash-preview",
+        "model": TEXT_MODEL,
         "api": "interactions",
     }
 
@@ -103,7 +104,7 @@ async def continue_interaction(
         context_msg += f"\n\n[Current page context: {current_page_text[:800]}]"
 
     response = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model=TEXT_MODEL,
         contents=[context_msg],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -135,7 +136,7 @@ async def deep_research_book(
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-pro",  # Fallback — deep-research requires special access
+            model=DEEP_RESEARCH_MODEL,  # Fallback — deep-research requires special access
             contents=[
                 f"""You are an expert {subject} educator. Perform a deep pedagogical analysis of this textbook content.
 

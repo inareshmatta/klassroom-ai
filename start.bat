@@ -1,10 +1,10 @@
 @echo off
-title KlassroomAI
+title Klassbook AI
 color 0A
 
 echo.
 echo  ========================================
-echo    KlassroomAI - Starting App
+echo    Klassbook AI - Starting App
 echo  ========================================
 echo.
 
@@ -39,7 +39,7 @@ start http://localhost:8080
 echo [4/4] Starting backend server...
 echo.
 echo  ========================================
-echo    KlassroomAI is running!
+echo    Klassbook AI is running!
 echo    Frontend ^& Backend: http://localhost:8080
 echo  ========================================
 echo.

@@ -1,4 +1,4 @@
-# 🎓 KlassroomAI
+# 🎓 Klassbook AI
 
 > **Transform static textbooks into interactive, multimodal AI learning environments.**
 
@@ -23,11 +23,11 @@ We were inspired to solve this by bringing a **proactive, multimodal AI agent di
 
 ## What it does
 
-KlassroomAI takes any uploaded textbook (PDF) and wraps it in a **multimodal AI orchestration layer**, transforming static studying into an interactive, AI-guided experience.
+Klassbook AI takes any uploaded textbook (PDF) and wraps it in a **multimodal AI orchestration layer**, transforming static studying into an interactive, AI-guided experience.
 
 ### 🎙️ 1. Real-time Spoken Tutor (Zero-Latency Voice)
 
-At its core, KlassroomAI features a **voice-first proactive tutor** powered by the **Gemini 2.5 Flash Native Audio** API.
+At its core, Klassbook AI features a **voice-first proactive tutor** powered by the **Gemini 2.5 Flash Native Audio** API.
 
 | Feature | How it works |
 |---|---|
@@ -90,7 +90,7 @@ Students input their exam date and available daily study hours:
 
 ### 🏗️ Architecture Diagram
 
-![KlassroomAI Architecture](https://raw.githubusercontent.com/inareshmatta/klassroom-ai/main/docs/architecture_diagram.png)
+![Klassbook AI Architecture](https://raw.githubusercontent.com/inareshmatta/klassroom-ai/main/docs/architecture_diagram.png)
 
 Our system is a decoupled **React Frontend** and **FastAPI Python Backend**. The voice tutor uses Google's recommended **client-to-server** architecture — the browser connects **directly** to the Gemini Live API via short-lived ephemeral tokens, eliminating the backend WebSocket proxy for minimal latency. Tool execution stays server-side via REST endpoints.
 
@@ -158,7 +158,7 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**. The
 
 ---
 
-## What's next for KlassroomAI
+## What's next for Klassbook AI
 
 🚀 **Multi-student collaborative rooms** — multiple students join the same study session with the AI tutor moderating
 
@@ -207,7 +207,7 @@ Visit the live app at **[https://klassroom-api-vav7hon2rq-uc.a.run.app](https://
 
 ### Test 6: Cloud Health Check
 1. Visit [https://klassroom-api-vav7hon2rq-uc.a.run.app/health](https://klassroom-api-vav7hon2rq-uc.a.run.app/health)
-2. Expected response: `{"status":"ok","service":"KlassroomAI"}`
+2. Expected response: `{"status":"ok","service":"Klassbook AI"}`
 
 ---
 

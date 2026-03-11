@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="./architecture.png" alt="KlassroomAI" width="700"/>
+  <img src="./architecture.png" alt="Klassbook AI" width="700"/>
   
-  # 🎓 KlassroomAI
+  # 🎓 Klassbook AI
   
   **Transform static textbooks into interactive, multimodal AI learning environments.**
 
@@ -38,10 +38,10 @@ We were inspired to solve this by bringing a **proactive, multimodal AI agent di
 
 ## What it does
 
-KlassroomAI takes any uploaded textbook (PDF) and wraps it in a multimodal orchestration layer, transforming static studying into an interactive, AI-guided experience.
+Klassbook AI takes any uploaded textbook (PDF) and wraps it in a multimodal orchestration layer, transforming static studying into an interactive, AI-guided experience.
 
 ### 🎙️ Real-time Spoken Tutor (Zero-Latency Voice)
-At its core, KlassroomAI features a **voice-first proactive tutor** powered by the **Gemini 2.5 Flash Native Audio** API.
+At its core, Klassbook AI features a **voice-first proactive tutor** powered by the **Gemini 2.5 Flash Native Audio** API.
 
 | Feature | How it works |
 |---|---|
@@ -106,7 +106,7 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**. The
 ```mermaid
 graph TD
     subgraph Client["🖥️ React / Vite Frontend"]
-        UI["KlassroomAI UI"]
+        UI["Klassbook AI UI"]
         PDF["PDF.js TextLayer"]
         WA["WebAudio API"]
         MIC["Mic Audio Stream"]
@@ -170,7 +170,7 @@ sequenceDiagram
 ### Folder Structure
 
 ```
-KlassroomAI/
+Klassbook AI/
 ├── 📁 frontend/                    # React + Vite SPA
 │   ├── src/
 │   │   ├── App.jsx                 # State orchestration hub
@@ -243,7 +243,7 @@ KlassroomAI/
 
 ---
 
-## What's next for KlassroomAI
+## What's next for Klassbook AI
 
 - 👥 **Multi-student collaborative rooms** — multiple students join the same study session with the AI tutor moderating
 - 🧠 **Long-term Knowledge Graphs** — storing the student's Knowledge Vault across years to predict future struggles
@@ -325,7 +325,7 @@ After spinning up the app, here's how judges can test every feature:
 3. A week-by-week schedule appears; check off tasks to track progress
 
 ### Test 6: Cloud Deployment
-1. Visit [https://klassroom-api-vav7hon2rq-uc.a.run.app/health](https://klassroom-api-vav7hon2rq-uc.a.run.app/health) → Expected: `{"status":"ok","service":"KlassroomAI"}`
+1. Visit [https://klassroom-api-vav7hon2rq-uc.a.run.app/health](https://klassroom-api-vav7hon2rq-uc.a.run.app/health) → Expected: `{"status":"ok","service":"Klassbook AI"}`
 2. Visit [https://klassroom-api-vav7hon2rq-uc.a.run.app](https://klassroom-api-vav7hon2rq-uc.a.run.app) → Full app served from Cloud Run
 
 ---

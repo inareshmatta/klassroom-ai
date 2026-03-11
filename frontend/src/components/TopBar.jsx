@@ -1,13 +1,13 @@
 import './TopBar.css'
 
-export default function TopBar({ books, session, onEndSession }) {
+export default function TopBar({ books, session, theme, toggleTheme, onEndSession }) {
     const bookCount = books?.length || 0
     return (
         <header className="topbar">
             <div className="topbar-left">
                 <span className="topbar-logo">
                     <span className="topbar-logo-icon">📖</span>
-                    <span className="gradient-text">ClassbookAI</span>
+                    <span className="gradient-text">Klassbook AI</span>
                 </span>
 
                 {bookCount > 0 && (
@@ -21,6 +21,9 @@ export default function TopBar({ books, session, onEndSession }) {
             </div>
 
             <div className="topbar-right">
+                <button className="btn-icon btn-ghost" onClick={toggleTheme} title="Toggle Theme" style={{ marginRight: 16 }}>
+                    {theme === 'light' ? '🌙' : '☀️'}
+                </button>
                 {session.isLive ? (
                     <>
                         <span className="live-indicator">
