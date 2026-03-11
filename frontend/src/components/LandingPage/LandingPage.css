@@ -402,3 +402,60 @@
         font-size: 2.2rem;
     }
 }
+
+/* Access Passcode Styling */
+.access-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.access-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.access-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 1rem;
+    color: var(--clr-text);
+    outline: none;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    width: 250px;
+}
+
+.access-input:focus {
+    border-color: var(--clr-primary);
+    box-shadow: 0 0 15px rgba(var(--clr-primary-rgb), 0.3);
+}
+
+.access-input.error {
+    border-color: #ff4d4f;
+    animation: shake 0.4s ease-in-out;
+}
+
+.access-error-msg {
+    color: #ff4d4f;
+    font-size: 0.85rem;
+    height: 20px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.access-error-msg.visible {
+    opacity: 1;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+}

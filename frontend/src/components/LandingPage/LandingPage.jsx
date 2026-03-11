@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import './LandingPage.css';
 
 export default function LandingPage({ onEnter, theme, toggleTheme }) {
+    const [accessCode, setAccessCode] = useState('');
+    const [accessError, setAccessError] = useState(false);
+    const heroInputRef = useRef(null);
+
+    const handleAccessSubmit = () => {
+        if (accessCode.trim().toUpperCase() === 'GEMINI-LIVE-AGENT-26-MATTA') {
+            onEnter();
+        } else {
+            setAccessError(true);
+            setTimeout(() => setAccessError(false), 2000);
+        }
+    };
+
     return (
         <div className="landing-container">
             {/* Background Orbs Elements */}
@@ -22,7 +35,7 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                     <button className="btn-icon btn-ghost" onClick={toggleTheme} title="Toggle Theme" style={{ marginRight: 12 }}>
                         {theme === 'light' ? '🌙' : '☀️'}
                     </button>
-                    <button className="btn-nav-cta" onClick={onEnter}>
+                    <button className="btn-nav-cta" onClick={() => heroInputRef.current?.focus()}>
                         Open App
                     </button>
                 </div>
@@ -45,14 +58,30 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                             Upload textbooks, practice with interactive quizzes, and talk naturally to your tutor.
                             Experience customized learning designed to help you achieve perfect grades.
                         </p>
-                        <motion.button
-                            className="btn-primary-cta"
-                            onClick={onEnter}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            Start Learning Free
-                        </motion.button>
+                        <div className="access-container">
+                            <div className="access-input-group">
+                                <input 
+                                    ref={heroInputRef}
+                                    type="text" 
+                                    className={`access-input ${accessError ? 'error' : ''}`}
+                                    placeholder="Enter Judge Access Code" 
+                                    value={accessCode}
+                                    onChange={(e) => setAccessCode(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAccessSubmit()}
+                                />
+                                <motion.button
+                                    className="btn-primary-cta"
+                                    onClick={handleAccessSubmit}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    Start Learning Free
+                                </motion.button>
+                            </div>
+                            <div className={`access-error-msg ${accessError ? 'visible' : ''}`}>
+                                Invalid access code
+                            </div>
+                        </div>
                     </motion.div>
 
                     <motion.div
@@ -167,9 +196,24 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                     >
                         <h2>Ready to boost your grades?</h2>
                         <p>Join thousands of students learning smarter with Klassbook AI.</p>
-                        <button className="btn-primary-cta" onClick={onEnter}>
-                            Enter the Classroom
-                        </button>
+                        <div className="access-container" style={{ marginTop: '25px' }}>
+                            <div className="access-input-group">
+                                <input 
+                                    type="text" 
+                                    className={`access-input ${accessError ? 'error' : ''}`}
+                                    placeholder="Enter Judge Access Code" 
+                                    value={accessCode}
+                                    onChange={(e) => setAccessCode(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAccessSubmit()}
+                                />
+                                <button className="btn-primary-cta" onClick={handleAccessSubmit}>
+                                    Enter the Classroom
+                                </button>
+                            </div>
+                            <div className={`access-error-msg ${accessError ? 'visible' : ''}`}>
+                                Invalid access code
+                            </div>
+                        </div>
                     </motion.div>
                 </section>
             </main>
