@@ -124,9 +124,28 @@ export default function App() {
     }))
   }, [])
 
+  // Global loading state for agent tools
+  const [agentLoadingMessage, setAgentLoadingMessage] = useState(null)
+
   // Listen for agent tool results to automatically open corresponding panels
   useEffect(() => {
+    const handleToolStart = (e) => {
+      const { tool } = e.detail
+      const friendlyName = {
+        generate_quiz: 'Generating Quiz...',
+        lookup_word: 'Looking up definition...',
+        generate_visual: 'Creating visual diagram...',
+        create_bookmark: 'Saving to Knowledge Vault...',
+        generate_flashcards: 'Creating flashcards...',
+      }[tool] || 'Agent is working...'
+      
+      setAgentLoadingMessage(friendlyName)
+    }
+
     const handleToolResult = (e) => {
+      // Clear loading state
+      setAgentLoadingMessage(null)
+
       const { tool, result, args } = e.detail
       if (tool === 'generate_visual') {
         // Open the visual panel with the generated image
@@ -147,8 +166,12 @@ export default function App() {
       }
     }
 
+    window.addEventListener('agent-tool-start', handleToolStart)
     window.addEventListener('agent-tool-result', handleToolResult)
-    return () => window.removeEventListener('agent-tool-result', handleToolResult)
+    return () => {
+      window.removeEventListener('agent-tool-start', handleToolStart)
+      window.removeEventListener('agent-tool-result', handleToolResult)
+    }
   }, [openVisualPanel, onVisualGenerated])
 
   if (!hasEntered) {
@@ -224,12 +247,19 @@ export default function App() {
           <RightPanel
             pageAnalysis={pageAnalysis}
             currentPage={currentPage}
-          subject={activeBook?.subject || 'General'}
+            subject={activeBook?.subject || 'General'}
             appendTranscript={appendTranscript}
             onOpenAssessment={() => setAssessmentOpen(true)}
           />
         </div>
       </div>
+
+      {agentLoadingMessage && (
+        <div className="agent-loading-toast">
+          <div className="spinner"></div>
+          <span>{agentLoadingMessage}</span>
+        </div>
+      )}
 
       {/* Full-screen overlays */}
       <AnimatePresence>

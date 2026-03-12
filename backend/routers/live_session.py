@@ -206,14 +206,21 @@ async def execute_tool(name: str, args: dict, client) -> dict:
     if name == "generate_quiz":
         topic = args.get("topic", "General")
         num = min(args.get("num_questions", 3), 5)
-        qtype = args.get("quiz_type", "mcq")
         diff = args.get("difficulty", 3)
+        
+        quiz_type_arg = args.get("quiz_type", "multiple-choice").lower()
+        if "fill" in quiz_type_arg:
+            q_type_str = "fill-in-the-blanks"
+        elif "true" in quiz_type_arg or "false" in quiz_type_arg:
+            q_type_str = "true/false"
+        else:
+            q_type_str = "multiple-choice"
 
         response = client.models.generate_content(
             model=TEXT_MODEL,
             contents=[
-                f"Generate {num} {qtype} questions about '{topic}' at difficulty {diff}/5. "
-                f"Return JSON with 'questions' array. Each has: question, options (4), correct_index, explanation."
+                f"Generate {num} {q_type_str} questions about '{topic}' at difficulty {diff}/5. "
+                f"Return JSON with 'questions' array. Each has: question (use _____ for fill in the blanks), options (4 choices always), correct_index, explanation."
             ],
             config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
@@ -226,8 +233,20 @@ async def execute_tool(name: str, args: dict, client) -> dict:
         response = client.models.generate_content(
             model=TEXT_MODEL,
             contents=[
-                f'Define "{word}" for a {subject} student. Return JSON: '
-                f'ipa, pronunciation_guide, etymology, subject_definition, simple_analogy, related_terms (4).'
+                f'Word: "{word}"\n'
+                f'Subject: {subject}\n'
+                f'You are a dictionary and tutoring agent. Look up this word and return JSON with these exact keys:\n'
+                f'- "ipa": IPA pronunciation string\n'
+                f'- "pronunciation_guide": simple pronunciation guide for students\n'
+                f'- "etymology": word origin/roots\n'
+                f'- "general_definition": standard dictionary definition (string)\n'
+                f'- "subject_definition": definition specific to {subject} context (string)\n'
+                f'- "simple_analogy": explain to a 12-year-old using a relatable everyday analogy (string)\n'
+                f'- "usage_in_context": usage example in context (string)\n'
+                f'- "example_sentence": one clear example sentence using this word (string)\n'
+                f'- "related_terms": list of 4 related terms from same subject (array of strings)\n'
+                f'- "difficulty": how advanced this term is, 1-5 integer\n'
+                f'- "fun_fact": one interesting/memorable fact about this concept (string)'
             ],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

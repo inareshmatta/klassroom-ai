@@ -51,7 +51,10 @@ export default function AssessmentPanel({ books, activeBook, pageAnalysis, curre
 
             console.log('[AssessmentPanel] Extracted questions:', rawQuestions?.length || 0)
 
-            if (rawQuestions && rawQuestions.length > 0) {
+            if (initialData.error) {
+                setError(initialData.error)
+                setStep('setup')
+            } else if (rawQuestions && rawQuestions.length > 0) {
                 const qs = rawQuestions.map((q, i) => ({ ...q, id: i }))
                 setQuestions(qs)
                 setAnswers({})
@@ -60,6 +63,8 @@ export default function AssessmentPanel({ books, activeBook, pageAnalysis, curre
                 setStep('taking')
             } else {
                 console.warn('[AssessmentPanel] No valid questions found in initialData, falling back to setup mode')
+                setError('AI returned no valid questions. Please try generating again.')
+                setStep('setup')
             }
         }
     }, [initialData])
@@ -366,6 +371,20 @@ export default function AssessmentPanel({ books, activeBook, pageAnalysis, curre
                                 </p>
                                 <div className="flex gap-2" style={{ marginTop: 10 }}>
                                     <button className="btn btn-primary" onClick={restartAssessment}>🔄 New Assessment</button>
+                                    <button className="btn btn-outline" onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('agent-tool-result', {
+                                            detail: {
+                                                tool: 'create_bookmark',
+                                                result: {
+                                                    saved: true,
+                                                    text: `Assessment Score: ${results.percentage}% (${results.correct}/${results.total}) on ${topic || 'Current Topic'}. Knowledge gap areas identified in: ${results.questions.filter(q => !q.isCorrect).map((q,i) => `Q${i+1}`).join(', ') || 'None!'}`,
+                                                    tags: ['Assessment', 'Score']
+                                                }
+                                            }
+                                        }))
+                                        // Brief auto-hide toast could be here, but Native alert works.
+                                        alert('Saved to Knowledge Vault!')
+                                    }}>🔖 Save to Vault</button>
                                     <button className="btn btn-ghost" onClick={onClose}>Done</button>
                                 </div>
                             </div>
@@ -410,11 +429,11 @@ function QuestionCard({ question: q, qIdx, answer, matchAnswer, onAnswer, onMatc
             transition={{ duration: 0.2 }}>
 
             <div className="ap-q-header">
-                <span className={`tag ${q.type === 'mcq' ? 'tag-blue' :
-                    q.type === 'fill_blank' ? 'tag-amber' :
-                        q.type === 'true_false' ? 'tag-teal' :
-                            q.type === 'match_following' ? 'tag-purple' : 'tag-green'
-                    }`}>{q.type.replace(/_/g, ' ')}</span>
+                <span className={`tag ${(q.type || 'mcq') === 'mcq' ? 'tag-blue' :
+                    (q.type || 'mcq') === 'fill_blank' ? 'tag-amber' :
+                        (q.type || 'mcq') === 'true_false' ? 'tag-teal' :
+                            (q.type || 'mcq') === 'match_following' ? 'tag-purple' : 'tag-green'
+                    }`}>{(q.type || 'mcq').replace(/_/g, ' ')}</span>
                 {q.topic && <span className="text-xs text-muted">{q.topic}</span>}
             </div>
 

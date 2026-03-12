@@ -78,6 +78,10 @@ export default function WordTooltip({ word, x, y, definition, loading, onClose, 
                         <div className="shimmer" style={{ height: 12, borderRadius: 4, width: '80%' }} />
                         <div className="shimmer" style={{ height: 12, borderRadius: 4, width: '60%', marginTop: 4 }} />
                     </div>
+                ) : definition?.error ? (
+                    <div className="wt-error" style={{ color: 'var(--clr-coral)', padding: '8px 0', fontSize: '0.9rem' }}>
+                        ⚠️ {definition.error}
+                    </div>
                 ) : definition ? (
                     <>
                         {/* Etymology */}

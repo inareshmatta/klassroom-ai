@@ -50,11 +50,22 @@ export default function VoiceControls({
         tick()
     }, [])
 
-    // Stop all audio playback immediately
+    // Stop all audio playback immediately — aggressively flush buffered audio
     const stopAudio = useCallback(() => {
+        // Stop all scheduled sources
         activeSourcesRef.current.forEach(src => { try { src.stop() } catch (e) { } })
         activeSourcesRef.current = []
         nextPlayTimeRef.current = 0
+
+        // Close and recreate the playback context to flush any buffered audio instantly
+        const oldCtx = playbackCtxRef.current
+        if (oldCtx && oldCtx.state !== 'closed') {
+            try { oldCtx.close() } catch (e) { }
+        }
+        const newCtx = new AudioContext({ sampleRate: RECV_SAMPLE_RATE })
+        newCtx.resume()
+        playbackCtxRef.current = newCtx
+
         setSession(s => ({ ...s, orbState: 'listening' }))
     }, [setSession])
 
@@ -127,24 +138,30 @@ When the student asks about something on "this page" or "the current page", refe
 Always be aware of which page the student is on and reference specific content from that page.
 
 CRITICAL INSTRUCTIONS:
-- You are equipped with tools (dictionary, quiz, visual generator).
+- You are equipped with tools (dictionary, quiz, visual generator, flashcards).
 - When asked to explain a concept visually, you MUST call 'generate_visual'.
 - When asked for a definition or what a word means, you MUST call 'lookup_word'.
+- When asked for a quiz, test, MCQs, or "fill in the blanks", you MUST call 'generate_quiz' with the appropriate 'quiz_type' (e.g. 'mcq', 'fill_in_the_blanks').
+- When asked for flashcards or shorts, you MUST call 'generate_flashcards'.
+- When asked what to study next, you MUST call 'suggest_next_topic'.
+- NEVER tell the user to click a button or use a tool manually. ALWAYS execute the tool call yourself!
 - When discussing complex topics, proactively generate diagrams using 'generate_visual'.
 - Do NOT just talk about these things; actually execute the tool call!
-- Be conversational, use the student's name if they give it, and make learning fun!`
+- IMPORTANT: Before or while calling a tool, ALWAYS give a short verbal confirmation like "Sure, let me generate that quiz for you" or "Let me draw that up" so there is no dead air.
+- Be conversational, use the student's name if they give it, and make learning fun!
+`
 
         const tools = [{
             functionDeclarations: [
-                { name: "generate_quiz", description: "Generate quiz questions to test student understanding", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, num_questions: { type: "INTEGER" }, quiz_type: { type: "STRING" } }, required: ["topic"] } },
+                { name: "generate_quiz", description: "Create quiz questions (MCQs, fill in the blanks, true/false) to test the student on a topic. Call this when asked for a quiz, test, MCQs, or fill in the blanks.", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, num_questions: { type: "INTEGER" }, quiz_type: { type: "STRING", description: "mcq, fill_in_the_blanks, true_false" } }, required: ["topic"] } },
                 { name: "lookup_word", description: "Look up definition, pronunciation, and etymology of a word", parameters: { type: "OBJECT", properties: { word: { type: "STRING" }, subject: { type: "STRING" } }, required: ["word"] } },
                 { name: "generate_visual", description: "Generate a visual diagram to explain a concept", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, visual_type: { type: "STRING" } }, required: ["topic"] } },
-                { name: "create_bookmark", description: "Save an important concept for revision", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
-                { name: "suggest_next_topic", description: "Suggest what to study next", parameters: { type: "OBJECT", properties: { current_topic: { type: "STRING" } }, required: ["current_topic"] } },
+                { name: "create_bookmark", description: "Save an important concept in the Knowledge Vault for revision. Call this when the student says 'save this', 'remember this', or 'add to knowledge vault'.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+                { name: "suggest_next_topic", description: "Suggest what to study next based on context", parameters: { type: "OBJECT", properties: { current_topic: { type: "STRING" } }, required: ["current_topic"] } },
                 { name: "summarize_page", description: "Create a bullet-point summary of the current page", parameters: { type: "OBJECT", properties: { page_text: { type: "STRING" }, max_points: { type: "INTEGER" } }, required: ["page_text"] } },
                 { name: "explain_like_im_5", description: "Simplify a complex concept for a 5-year-old", parameters: { type: "OBJECT", properties: { concept: { type: "STRING" } }, required: ["concept"] } },
                 { name: "compare_concepts", description: "Compare two concepts side-by-side", parameters: { type: "OBJECT", properties: { concept_a: { type: "STRING" }, concept_b: { type: "STRING" } }, required: ["concept_a", "concept_b"] } },
-                { name: "generate_flashcards", description: "Generate revision flashcards on a topic", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, num_cards: { type: "INTEGER" } }, required: ["topic"] } },
+                { name: "generate_flashcards", description: "Generate revision flashcards or shorts on a topic. Call this immediately when the user asks for flashcards or shorts.", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, num_cards: { type: "INTEGER" } }, required: ["topic"] } },
             ]
         }]
 
@@ -221,48 +238,65 @@ CRITICAL INSTRUCTIONS:
                             }
 
                             if (functionCalls.length > 0) {
-                                const functionResponses = []
-                                for (const fc of functionCalls) {
-                                    const toolEmoji = {
-                                        generate_quiz: '📝', lookup_word: '📖',
-                                        generate_visual: '🎨', create_bookmark: '🔖',
-                                        suggest_next_topic: '📚',
-                                    }[fc.name] || '🔧'
-                                    appendTranscript('agent', `${toolEmoji} Agent called: ${fc.name}`)
+                                // Execute tools in the background — do NOT block the message handler
+                                // This prevents audio lag while tools are being fetched
+                                const gs = sessionRef.current
+                                ;(async () => {
+                                    const functionResponses = []
+                                    for (const fc of functionCalls) {
+                                        const toolEmoji = {
+                                            generate_quiz: '📝', lookup_word: '📖',
+                                            generate_visual: '🎨', create_bookmark: '🔖',
+                                            suggest_next_topic: '📚', generate_flashcards: '📇',
+                                        }[fc.name] || '🔧'
 
-                                    // Execute tool on backend (API key stays server-side)
-                                    let toolResult = { error: 'Tool execution failed' }
-                                    try {
-                                        const res = await fetch('/api/execute-tool', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ tool: fc.name, args: fc.args }),
-                                        })
-                                        if (res.ok) {
-                                            toolResult = await res.json()
+                                        const toolFriendlyName = {
+                                            generate_quiz: 'Quiz', lookup_word: 'Definition',
+                                            generate_visual: 'Visual Diagram', create_bookmark: 'Note in Knowledge Vault',
+                                            generate_flashcards: 'Flashcards',
+                                        }[fc.name] || 'Content'
+
+                                        appendTranscript('agent', `${toolEmoji} Agent is generating: ${toolFriendlyName}...`)
+
+                                        // Dispatch start event for UI loading indicators
+                                        window.dispatchEvent(new CustomEvent('agent-tool-start', {
+                                            detail: { tool: fc.name, args: fc.args }
+                                        }))
+
+                                        // Execute tool on backend (API key stays server-side)
+                                        let toolResult = { error: 'Tool execution failed' }
+                                        try {
+                                            const res = await fetch('/api/execute-tool', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ tool: fc.name, args: fc.args }),
+                                            })
+                                            if (res.ok) {
+                                                toolResult = await res.json()
+                                            }
+                                        } catch (e) {
+                                            console.error('[LIVE] Tool execution error:', e)
                                         }
-                                    } catch (e) {
-                                        console.error('[LIVE] Tool execution error:', e)
+
+                                        // Dispatch the full rich data to the frontend UI so it can render the component
+                                        window.dispatchEvent(new CustomEvent('agent-tool-result', {
+                                            detail: { tool: fc.name, args: fc.args, result: toolResult }
+                                        }))
+
+                                        // Send a simplified status back to Gemini so it doesn't try to read the whole quiz/image aloud verbally
+                                        functionResponses.push({
+                                            id: fc.id,
+                                            name: fc.name,
+                                            response: {
+                                                result: "Success. The tool result is now visible on the user's screen.",
+                                                instruction: "Acknowledge briefly, but DO NOT read the quiz questions, image descriptions, or flashcards aloud."
+                                            },
+                                        })
                                     }
 
-                                    // Dispatch the full rich data to the frontend UI so it can render the component
-                                    window.dispatchEvent(new CustomEvent('agent-tool-result', {
-                                        detail: { tool: fc.name, args: fc.args, result: toolResult }
-                                    }))
-
-                                    // Send a simplified status back to Gemini so it doesn't try to read the whole quiz/image aloud verbally
-                                    functionResponses.push({
-                                        id: fc.id,
-                                        name: fc.name,
-                                        response: {
-                                            result: "Success. The tool result is now visible on the user's screen.",
-                                            instruction: "Acknowledge briefly, but DO NOT read the quiz questions, image descriptions, or flashcards aloud."
-                                        },
-                                    })
-                                }
-
-                                // Send tool results back to Gemini
-                                geminiSession.sendToolResponse({ functionResponses })
+                                    // Send tool results back to Gemini
+                                    if (gs) gs.sendToolResponse({ functionResponses })
+                                })()
                             }
                         } catch (err) {
                             console.error('[LIVE] Message handling error:', err)
@@ -273,9 +307,15 @@ CRITICAL INSTRUCTIONS:
                         appendTranscript('system', '⚠️ ' + (e.message || 'Connection error'))
                     },
                     onclose: (e) => {
-                        console.log('[LIVE] Closed:', e?.reason || 'Session ended')
-                        setSession(s => ({ ...s, isLive: false, orbState: 'idle' }))
+                        const reason = e?.reason || 'Session ended'
+                        console.log('[LIVE] Closed:', reason)
                         cancelAnimationFrame(animFrameRef.current)
+
+                        // If the session was supposed to be live, this is an unexpected close
+                        // Show a visible notification so the user knows what happened
+                        appendTranscript('system', `⚠️ Voice session ended: ${reason}. Click "Start Tutor" to reconnect.`)
+                        setSession(s => ({ ...s, isLive: false, orbState: 'idle' }))
+                        sessionRef.current = null
                     },
                 },
             })
@@ -315,12 +355,16 @@ CRITICAL INSTRUCTIONS:
                 if (!sessionRef.current) return
                 const f32 = e.inputBuffer.getChannelData(0)
                 const i16 = new Int16Array(f32.length)
-                for (let i = 0; i < f32.length; i++) i16[i] = Math.max(-32768, Math.min(32767, f32[i] * 32768))
+                for (let i = 0; i < f32.length; i++) {
+                    i16[i] = Math.max(-32768, Math.min(32767, f32[i] * 32768))
+                }
 
-                // Convert to base64 for the JS SDK
+                // Faster Base64 conversion for PCM chunks
                 const bytes = new Uint8Array(i16.buffer)
-                let binary = ''
-                for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+                
+                // Chunk the string creation to avoid max stack size exceeded errors if chunks were larger,
+                // but at 1024, apply works well.
+                const binary = String.fromCharCode.apply(null, bytes)
                 const b64 = btoa(binary)
 
                 // Pass the correct parameter object for LiveSendRealtimeInputParameters

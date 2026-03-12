@@ -52,17 +52,26 @@ def _execute(name: str, args: dict, client) -> dict:
         topic = args.get("topic", "General")
         num = min(_safe_int(args.get("num_questions"), 3), 5)
         diff = _safe_int(args.get("difficulty"), 3)
+        
+        quiz_type_arg = args.get("quiz_type", "multiple-choice").lower()
+        if "fill" in quiz_type_arg:
+            q_type_str = "fill-in-the-blanks"
+        elif "true" in quiz_type_arg or "false" in quiz_type_arg:
+            q_type_str = "true/false"
+        else:
+            q_type_str = "multiple-choice"
 
-        print(f"[QUIZ] Generating {num} MCQ questions about '{topic}' (difficulty {diff})")
+        print(f"[QUIZ] Generating {num} {q_type_str} questions about '{topic}' (difficulty {diff})")
 
         response = client.models.generate_content(
             model=TEXT_MODEL,
             contents=[
-                f"Generate exactly {num} multiple-choice questions about '{topic}' at difficulty {diff}/5.\n"
+                f"Generate exactly {num} {q_type_str} questions about '{topic}' at difficulty {diff}/5.\n"
                 f"Return a JSON object like: {{\"questions\": [...]}}\n"
                 f"Each question object MUST have these keys:\n"
-                f"- \"question\": string\n"
-                f"- \"options\": array of exactly 4 strings\n"
+                f"- \"type\": string — one of: \"mcq\", \"fill_blank\", \"true_false\"\n"
+                f"- \"question\": string (for fill in the blanks, use _____)\n"
+                f"- \"options\": array of exactly 4 strings (provide 4 choices even for fill-in-the-blanks to test the student; for true/false, provide ['True', 'False', '', ''])\n"
                 f"- \"correct_index\": integer 0-3\n"
                 f"- \"explanation\": string\n"
                 f"Return ONLY valid JSON. No extra text."
@@ -109,6 +118,13 @@ def _execute(name: str, args: dict, client) -> dict:
                 questions = []
                 print(f"[QUIZ] WARNING: Could not extract questions from parsed JSON")
 
+            # ── Ensure every question has a 'type' field ──
+            type_map = {"multiple-choice": "mcq", "fill-in-the-blanks": "fill_blank", "true/false": "true_false"}
+            default_type = type_map.get(q_type_str, "mcq")
+            for q in questions:
+                if not q.get("type"):
+                    q["type"] = default_type
+
             print(f"[QUIZ] Extracted {len(questions)} questions")
             final = {"questions": questions}
 
@@ -125,8 +141,20 @@ def _execute(name: str, args: dict, client) -> dict:
         response = client.models.generate_content(
             model=TEXT_MODEL,
             contents=[
-                f'Define "{word}" for a {subject} student. Return JSON: '
-                f'ipa, pronunciation_guide, etymology, subject_definition, general_definition, simple_analogy, related_terms (array of 4 strings).'
+                f'Word: "{word}"\n'
+                f'Subject: {subject}\n'
+                f'You are a dictionary and tutoring agent. Look up this word and return JSON with these exact keys:\n'
+                f'- "ipa": IPA pronunciation string\n'
+                f'- "pronunciation_guide": simple pronunciation guide for students\n'
+                f'- "etymology": word origin/roots\n'
+                f'- "general_definition": standard dictionary definition (string)\n'
+                f'- "subject_definition": definition specific to {subject} context (string)\n'
+                f'- "simple_analogy": explain to a 12-year-old using a relatable everyday analogy (string)\n'
+                f'- "usage_in_context": usage example in context (string)\n'
+                f'- "example_sentence": one clear example sentence using this word (string)\n'
+                f'- "related_terms": list of 4 related terms from same subject (array of strings)\n'
+                f'- "difficulty": how advanced this term is, 1-5 integer\n'
+                f'- "fun_fact": one interesting/memorable fact about this concept (string)'
             ],
             config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
