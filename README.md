@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="./architecture.png" alt="Klassbook AI" width="700"/>
+  <img src="./architecture.png" alt="Shivy AI" width="700"/>
   
-  # 🎓 Klassbook AI
+  # 🎓 Shivy AI
   
   **Transform static textbooks into interactive, multimodal AI learning environments.**
 
@@ -18,7 +18,7 @@
 
   <br/>
 
-  [🌐 Live Demo](https://klassbook-ai-kygarr5jkq-uc.a.run.app) · [📖 Docs](#how-we-built-it) · [🚀 Quick Start](#-spin-up-instructions)
+  [🌐 Live Demo]([Shivy AI](https://shivy-ai-513107347048.us-central1.run.app/)) · [📖 Docs](#how-we-built-it) · [🚀 Quick Start](#-spin-up-instructions)
 
 </div>
 
@@ -38,10 +38,10 @@ We were inspired to solve this by bringing a **proactive, multimodal AI agent di
 
 ## What it does
 
-Klassbook AI takes any uploaded textbook (PDF) and wraps it in a multimodal orchestration layer, transforming static studying into an interactive, AI-guided experience.
+Shivy AI takes any uploaded textbook (PDF) and wraps it in a multimodal orchestration layer, transforming static studying into an interactive, AI-guided experience.
 
 ### 🎙️ Real-time Spoken Tutor (Zero-Latency Voice)
-At its core, Klassbook AI features a **voice-first proactive tutor** powered by the **Gemini 2.5 Flash Native Audio** API.
+At its core, Shivy AI features a **voice-first proactive tutor** powered by the **Gemini 2.5 Flash Native Audio** API.
 
 | Feature | How it works |
 |---|---|
@@ -106,7 +106,7 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**. The
 ```mermaid
 graph TD
     subgraph Client["🖥️ React / Vite Frontend"]
-        UI["Klassbook AI UI"]
+        UI["Shivy AI UI"]
         PDF["PDF.js TextLayer"]
         WA["WebAudio API"]
         MIC["Mic Audio Stream"]
@@ -170,7 +170,7 @@ sequenceDiagram
 ### Folder Structure
 
 ```
-Klassbook AI/
+Shivy AI/
 ├── 📁 frontend/                    # React + Vite SPA
 │   ├── src/
 │   │   ├── App.jsx                 # State orchestration hub
@@ -243,7 +243,7 @@ Klassbook AI/
 
 ---
 
-## What's next for Klassbook AI
+## What's next for Shivy AI
 
 - 👥 **Multi-student collaborative rooms** — multiple students join the same study session with the AI tutor moderating
 - 🧠 **Long-term Knowledge Graphs** — storing the student's Knowledge Vault across years to predict future struggles
@@ -296,7 +296,7 @@ npm run dev
 After spinning up the app, here's how judges can test every feature:
 
 ### Test 1: Upload a PDF & Interactive Words
-1. Open [https://klassbook-ai-kygarr5jkq-uc.a.run.app](https://klassbook-ai-kygarr5jkq-uc.a.run.app) in Chrome
+1. Open [https://Shivy-ai-kygarr5jkq-uc.a.run.app](https://Shivy-ai-kygarr5jkq-uc.a.run.app) in Chrome
 2. Drag any PDF into the upload area on the left panel
 3. **Click any word** on the rendered page → a dictionary tooltip appears with pronunciation, etymology, and definition
 4. Click **🔖 Save** → the word appears in the **Knowledge Vault** (right panel)
@@ -325,8 +325,8 @@ After spinning up the app, here's how judges can test every feature:
 3. A week-by-week schedule appears; check off tasks to track progress
 
 ### Test 6: Cloud Deployment
-1. Visit [https://klassbook-ai-kygarr5jkq-uc.a.run.app/health](https://klassbook-ai-kygarr5jkq-uc.a.run.app/health) → Expected: `{"status":"ok","service":"Klassbook AI"}`
-2. Visit [https://klassbook-ai-kygarr5jkq-uc.a.run.app](https://klassbook-ai-kygarr5jkq-uc.a.run.app) → Full app served from Cloud Run
+1. Visit [https://Shivy-ai-kygarr5jkq-uc.a.run.app/health](https://Shivy-ai-kygarr5jkq-uc.a.run.app/health) → Expected: `{"status":"ok","service":"Shivy AI"}`
+2. Visit [https://Shivy-ai-kygarr5jkq-uc.a.run.app](https://Shivy-ai-kygarr5jkq-uc.a.run.app) → Full app served from Cloud Run
 
 ---
 
@@ -334,11 +334,11 @@ After spinning up the app, here's how judges can test every feature:
 
 | Item | Link |
 |---|---|
-| **Live App** | [https://klassbook-ai-kygarr5jkq-uc.a.run.app](https://klassbook-ai-kygarr5jkq-uc.a.run.app) |
-| **Health Check** | [/health](https://klassbook-ai-kygarr5jkq-uc.a.run.app/health) |
+| **Live App** | [https://Shivy-ai-kygarr5jkq-uc.a.run.app](https://Shivy-ai-kygarr5jkq-uc.a.run.app) |
+| **Health Check** | [/health](https://Shivy-ai-kygarr5jkq-uc.a.run.app/health) |
 | **Infrastructure-as-Code** | [`cloudbuild.yaml`](./cloudbuild.yaml) + [`Dockerfile`](./backend/Dockerfile) |
 | **Google Cloud API Usage** | [`ephemeral_token.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/ephemeral_token.py) — Ephemeral token minting · [`tool_executor.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/tool_executor.py) — Tool execution · [`VoiceControls.jsx`](https://github.com/inareshmatta/klassroom-ai/blob/main/frontend/src/components/LeftPanel/VoiceControls.jsx) — Direct Gemini Live API connection · [`interactions.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/interactions.py) — Agentic tool orchestration |
-| **Cloud Console** | [Cloud Run Dashboard](https://console.cloud.google.com/run/detail/us-central1/klassbook-ai?project=klassroom-ai-backend) |
+| **Cloud Console** | [Cloud Run Dashboard](https://console.cloud.google.com/run/detail/us-central1/Shivy-ai?project=klassroom-ai-backend) |
 
 ---
 
