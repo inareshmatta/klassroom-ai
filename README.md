@@ -3,7 +3,7 @@
   
   # 🎓 Shivy AI
   
-  **Transform static textbooks into interactive, multimodal AI learning environments.**
+  **The Future of School, Powered by AI**
 
   [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
   [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -18,7 +18,7 @@
 
   <br/>
 
-  [🌐 Live Demo]([Shivy AI](https://shivy-ai-513107347048.us-central1.run.app/)) · [📖 Docs](#how-we-built-it) · [🚀 Quick Start](#-spin-up-instructions)
+  [🌐 Live Demo](https://shivy-ai-kygarr5jkq-uc.a.run.app) · [📖 Docs](#how-we-built-it) · [🚀 Quick Start](#-spin-up-instructions)
 
 </div>
 
@@ -29,10 +29,11 @@
 Modern education relies heavily on static PDFs, textbooks, and one-way lectures. When a student doesn't understand a concept, they are forced to **leave their study material** — to search Google, watch a YouTube video, or use a generic ChatGPT interface. This breaks focus and strips away the direct context of what they were studying.
 
 We were inspired to solve this by bringing a **proactive, multimodal AI agent directly into the textbook**. Instead of the student asking the AI questions in a separate chatbox, the AI:
-- **Watches** the student study (sees the exact PDF page)
+- **Watches** the student study (sees the exact PDF page AND the student via webcam)
 - **Listens** to their voice in real-time
-- **Sees** the diagrams and charts they are looking at
+- **Sees** the diagrams, charts, and even handwritten homework they hold up to the camera
 - **Speaks back** with low-latency, natural voice tutoring
+- **Monitors** discipline and behavior through continuous webcam vision
 
 ---
 
@@ -59,6 +60,8 @@ The AI tutor isn't just a chatbot — it acts as an **autonomous orchestration a
 | `generate_quiz` | After explaining a topic | **Assessment Panel auto-opens** with pre-loaded MCQs, True/False, and Fill-in-the-Blank questions — quiz starts immediately |
 | `lookup_word` | Student encounters an unfamiliar term | Google Search-grounded dictionary with IPA pronunciation, etymology, and contextual definition |
 | `generate_visual` | Concept needs a picture | **Visual Canvas auto-opens** with the generated infographic, flowchart, or concept map displayed instantly |
+| `log_discipline` | Student sleeping or camera off | 🚨 **Discipline flag logged** to Session Activity panel with timestamp. AI verbally nudges the student to refocus |
+| `save_dictation_words` | After dictation review complete | 📝 Completed dictation words are saved to the **Session Activity** panel after the AI verifies spelling via webcam |
 | `suggest_next_topic` | Student finishes a concept | AI guides them to the next logical topic based on curriculum and prerequisites |
 | `create_bookmark` | Student highlights important text | Content is saved to the Knowledge Vault for revision |
 | `summarize_page` | Page is dense or overwhelming | Generates concise bullet-point summaries of the current textbook page |
@@ -67,6 +70,40 @@ The AI tutor isn't just a chatbot — it acts as an **autonomous orchestration a
 | `generate_flashcards` | Student finishes a chapter | Creates front/back revision flashcards for spaced repetition study |
 
 > **Smart Tool Responses:** Tool results are split into two streams — the full rich data (quiz JSON, image bytes) goes to the frontend UI, while a lightweight status message goes back to the voice model. This prevents the AI from verbally reading out quiz questions or image descriptions, keeping the conversation natural.
+
+### 📹 Continuous Webcam Vision & Discipline Tracking
+The AI tutor doesn't just hear the student — it **sees** them via continuous webcam streaming:
+
+- **Webcam frames** are sent to Gemini every 6 seconds for real-time visual monitoring
+- **Discipline Detection**: If the student falls asleep (eyes closed, no movement) or covers/turns off the camera, the AI verbally nudges them and logs a `log_discipline` flag with a timestamp
+- **Smart False-Positive Prevention**: Looking down at a book or writing is recognized as *normal studying behavior* — only genuine issues are flagged
+- **Live Webcam Preview**: A small preview in the left panel shows exactly what the AI sees
+
+### 📝 Contextual Dictation Homework
+The AI tutor can conduct **interactive spelling dictation** based on the current textbook page:
+
+- Student chooses how many words (2, 3, or 5) to practice
+- The AI selects vocabulary **from the page the student is currently reading**
+- Words are dictated **one-by-one**, slowly sounded out (e.g. "Tok... en... i... zer")
+- The student writes each word and says "Next" to proceed
+- After all words are dictated, the student holds their paper up to the **webcam** for AI-powered spelling review
+- Words are only saved to the **Session Activity** panel *after* the AI has verified and given corrections
+
+### 📖 Interactive Guided Reading
+The AI reads the textbook aloud **paragraph by paragraph**, pausing after each to offer choices:
+
+- **"Dictation"** → starts a dictation exercise using words from that paragraph
+- **"Quiz"** → generates an MCQ assessment on the paragraph topic
+- **"Help with a word"** → triggers an instant dictionary lookup
+- **"Next"** → continues to the next paragraph
+- Can be activated by voice (*"Read this page to me"*) or by clicking the **Guided Reading** button
+
+### 🖼️ Image Uploads for Homework Review
+Students can upload **images of handwritten homework** (JPEG/PNG) alongside PDFs:
+
+- A dedicated **Image Canvas** renders uploaded images in the center panel
+- The **"Review Homework"** button sends the image to Gemini Vision for instant AI assessment
+- The AI provides feedback on handwriting, math solutions, and spelling — all via voice
 
 ### 🖼️ Visual Explainer (Nano Banana 2)
 Some concepts are impossible to understand through text or voice alone.
@@ -105,34 +142,40 @@ Our system is a decoupled **React Frontend** and **FastAPI Python Backend**. The
 
 ```mermaid
 graph TD
-    subgraph Client["🖥️ React / Vite Frontend"]
+    subgraph Client["🖥️ React Frontend (Vite)"]
         UI["Shivy AI UI"]
-        PDF["PDF.js TextLayer"]
-        WA["WebAudio API"]
-        MIC["Mic Audio Stream"]
+        PDF["PDF.js Engine"]
+        IMG["Image Canvas"]
+        WA["WebAudio API (24kHz)"]
+        MIC["Audio Capture (16kHz)"]
+        CAM["Webcam Stream (6s interval)"]
         SDK["@google/genai SDK"]
     end
 
-    subgraph Server["⚙️ FastAPI Backend - Cloud Run"]
-        TOKEN["Ephemeral Token Endpoint"]
-        TOOLS["Tool Executor REST"]
-        VIS["Vision API"]
-        PLAN["Curriculum Route"]
+    subgraph Server["⚙️ FastAPI Backend (Cloud Run)"]
+        TOKEN["Ephemeral Token Service"]
+        TOOLS["Agentic Tool Executor"]
+        VIS["Vision Analysis Service"]
+        PLAN["Curriculum Engine"]
     end
 
-    subgraph Google["☁️ Google Cloud / Gemini"]
+    subgraph Google["☁️ Google AI Layer"]
         LIVE["Gemini 2.5 Flash Native Audio"]
         GVIS["Gemini 2.5 Pro Vision"]
-        SEARCH["Google Search Grounding"]
+        SEARCH["Search Grounding"]
     end
 
-    UI -->|"1. POST /api/ephemeral-token"| TOKEN
-    TOKEN -->|"2. Short-lived token"| UI
-    SDK <-->|"3. Direct WebSocket: PCM Audio"| LIVE
-    SDK -->|"4. Tool call received"| TOOLS
-    TOOLS -->|"5. Tool result"| SDK
-    UI -->|"REST POST"| VIS
-    UI -->|"REST POST"| PLAN
+    %% Authentication & Connection
+    UI -->|"1. Request Token"| TOKEN
+    TOKEN -->|"2. Ephemeral Token"| UI
+    SDK <-->|"3. Direct WebSocket (PCM + Video)"| LIVE
+    CAM -->|"4. Webcam Frames"| SDK
+
+    %% Multimodal Feedback Loop
+    SDK -->|"5. Trigger Tool"| TOOLS
+    TOOLS -->|"6. Tool Result"| SDK
+    UI -->|"Vision Request"| VIS
+    IMG -->|"Homework Image"| VIS
     VIS --> GVIS
     LIVE <--> SEARCH
 ```
@@ -176,9 +219,9 @@ Shivy AI/
 │   │   ├── App.jsx                 # State orchestration hub
 │   │   ├── index.css               # Design system tokens
 │   │   └── components/
-│   │       ├── CenterCanvas/       # PDF renderer, word tooltips, AI orb
-│   │       ├── LeftPanel/          # Voice controls, book library, upload
-│   │       ├── RightPanel/         # Knowledge vault, quiz engine
+│   │       ├── CenterCanvas/       # PDF renderer, ImageCanvas, word tooltips, AI orb
+│   │       ├── LeftPanel/          # Voice controls, webcam preview, book library
+│   │       ├── RightPanel/         # Knowledge vault, session activity (discipline + dictation)
 │   │       ├── VisualPanel/        # AI visual explainer overlay
 │   │       ├── AssessmentPanel/    # Full assessment overlay
 │   │       └── CurriculumPlanner/  # Study schedule generator
@@ -199,7 +242,7 @@ Shivy AI/
 │       ├── visual_gen.py           # Image generation
 │       ├── quiz.py                 # Quiz generation
 │       ├── curriculum.py           # Study plan generation
-│       ├── upload.py               # PDF upload handling
+│       ├── upload.py               # PDF + image upload handling
 │       └── bookmarks.py            # Knowledge vault persistence
 │
 ├── cloudbuild.yaml                 # GCP Infrastructure-as-Code
@@ -225,7 +268,10 @@ Shivy AI/
 ## Accomplishments that we're proud of
 
 - 🎙️ Achieving a truly **human-like, zero-latency conversation loop** that understands the exact visual context of what the student is reading
-- 🤖 Successfully coupling **deep agentic tools** (autonomous quiz generation, visual explainer) into the real-time audio loop without blocking conversation
+- 📹 Building **continuous webcam vision** that monitors student behavior while distinguishing normal studying postures from genuine discipline issues
+- 📝 Creating a **complete dictation homework loop** — AI dictates words, student writes them, holds paper to camera, AI verifies spelling — all via voice
+- 📖 Implementing **interactive guided reading** where the AI reads paragraphs aloud and offers inline dictation, quizzes, and dictionary lookups after each one
+- 🤖 Successfully coupling **deep agentic tools** (autonomous quiz generation, visual explainer, discipline tracking, dictation) into the real-time audio loop without blocking conversation
 - 🔗 **Seamless tool-to-UI integration** — when the voice agent triggers a quiz or visual, the correct panel auto-opens with data pre-loaded. No manual navigation required.
 - ✨ Designing a pristine, **glassmorphic SaaS UI** that feels premium — not a hackathon prototype
 - ☁️ Setting up an **automated GCP Infrastructure-as-Code pipeline** using `cloudbuild.yaml` and Cloud Run
@@ -261,8 +307,8 @@ Shivy AI/
 
 ### 1. Clone & Configure
 ```bash
-git clone https://github.com/inareshmatta/klassroom-ai.git
-cd klassroom-ai
+git clone https://github.com/inareshmatta/shivy-ai.git
+cd shivy-ai
 ```
 
 Create `backend/.env`:
@@ -296,7 +342,7 @@ npm run dev
 After spinning up the app, here's how judges can test every feature:
 
 ### Test 1: Upload a PDF & Interactive Words
-1. Open [https://Shivy-ai-kygarr5jkq-uc.a.run.app](https://Shivy-ai-kygarr5jkq-uc.a.run.app) in Chrome
+1. Open [https://shivy-ai-kygarr5jkq-uc.a.run.app](https://shivy-ai-kygarr5jkq-uc.a.run.app) in Chrome
 2. Drag any PDF into the upload area on the left panel
 3. **Click any word** on the rendered page → a dictionary tooltip appears with pronunciation, etymology, and definition
 4. Click **🔖 Save** → the word appears in the **Knowledge Vault** (right panel)
@@ -309,24 +355,43 @@ After spinning up the app, here's how judges can test every feature:
 4. The AI should respond **within 1-2 seconds** with spoken audio
 5. **Test barge-in**: while the AI is speaking, interrupt — it should stop and respond to your interruption
 
-### Test 3: Visual Explainer
+### Test 3: Dictation Homework
+1. With the Voice Tutor active, say **"Let's do a dictation exercise"** or click **📝 Start Dictation**
+2. The AI asks how many words you want (2, 3, or 5)
+3. It dictates words one-by-one, sounding them out slowly
+4. Say **"Next"** after writing each word
+5. Hold your paper up to the **webcam** → the AI reviews your spelling
+6. Words appear in the **Session Activity** panel (right) only after review
+
+### Test 4: Guided Reading
+1. With the Voice Tutor active, say **"Read this page to me"** or click **📖 Guided Reading**
+2. The AI reads paragraph-by-paragraph, pausing after each
+3. Say **"Dictation"**, **"Quiz"**, or ask about a word → the AI triggers the corresponding tool
+4. Say **"Next"** to continue to the next paragraph
+
+### Test 5: Discipline Tracking
+1. With the Voice Tutor active, **cover your webcam** or close your eyes and stay still for 10+ seconds
+2. The AI should verbally nudge you and log a discipline flag in the **Session Activity** panel with a timestamp
+3. **Looking down at a book** should NOT trigger a false positive
+
+### Test 6: Image Upload & Homework Review
+1. Click **Add book** → upload a `.jpg` or `.png` image of handwritten homework
+2. The **Image Canvas** renders in the center panel
+3. Click **👁️ Review Homework** → the AI analyzes the image and gives feedback
+
+### Test 7: Visual Explainer
 1. Click any word on the PDF → dictionary tooltip appears
 2. Click **🎨 Visualize** → the Visual Explainer panel opens with the word pre-filled
 3. Click **Generate** → an AI-generated visual should appear
 
-### Test 4: Explain Page & Diagrams (Vision)
-1. Navigate to a page with diagrams/charts in the PDF
-2. Click **👁️ Explain Page & Diagrams** button
-3. The AI should verbally describe the visual content on the page
-
-### Test 5: Curriculum Planner
+### Test 8: Curriculum Planner
 1. Click **📅 Study Planner** in the left panel
 2. Set an exam date and daily study hours → click **Generate Plan**
 3. A week-by-week schedule appears; check off tasks to track progress
 
-### Test 6: Cloud Deployment
-1. Visit [https://Shivy-ai-kygarr5jkq-uc.a.run.app/health](https://Shivy-ai-kygarr5jkq-uc.a.run.app/health) → Expected: `{"status":"ok","service":"Shivy AI"}`
-2. Visit [https://Shivy-ai-kygarr5jkq-uc.a.run.app](https://Shivy-ai-kygarr5jkq-uc.a.run.app) → Full app served from Cloud Run
+### Test 9: Cloud Deployment
+1. Visit [https://shivy-ai-kygarr5jkq-uc.a.run.app/health](https://shivy-ai-kygarr5jkq-uc.a.run.app/health) → Expected: `{"status":"ok","service":"Shivy AI"}`
+2. Visit [https://shivy-ai-kygarr5jkq-uc.a.run.app](https://shivy-ai-kygarr5jkq-uc.a.run.app) → Full app served from Cloud Run
 
 ---
 
@@ -334,11 +399,11 @@ After spinning up the app, here's how judges can test every feature:
 
 | Item | Link |
 |---|---|
-| **Live App** | [https://Shivy-ai-kygarr5jkq-uc.a.run.app](https://Shivy-ai-kygarr5jkq-uc.a.run.app) |
-| **Health Check** | [/health](https://Shivy-ai-kygarr5jkq-uc.a.run.app/health) |
+| **Live App** | [https://shivy-ai-kygarr5jkq-uc.a.run.app](https://shivy-ai-kygarr5jkq-uc.a.run.app) |
+| **Health Check** | [/health](https://shivy-ai-kygarr5jkq-uc.a.run.app/health) |
 | **Infrastructure-as-Code** | [`cloudbuild.yaml`](./cloudbuild.yaml) + [`Dockerfile`](./backend/Dockerfile) |
-| **Google Cloud API Usage** | [`ephemeral_token.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/ephemeral_token.py) — Ephemeral token minting · [`tool_executor.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/tool_executor.py) — Tool execution · [`VoiceControls.jsx`](https://github.com/inareshmatta/klassroom-ai/blob/main/frontend/src/components/LeftPanel/VoiceControls.jsx) — Direct Gemini Live API connection · [`interactions.py`](https://github.com/inareshmatta/klassroom-ai/blob/main/backend/routers/interactions.py) — Agentic tool orchestration |
-| **Cloud Console** | [Cloud Run Dashboard](https://console.cloud.google.com/run/detail/us-central1/Shivy-ai?project=klassroom-ai-backend) |
+| **Google Cloud API Usage** | [`ephemeral_token.py`](https://github.com/inareshmatta/shivy-ai/main/backend/routers/ephemeral_token.py) — Ephemeral token minting · [`tool_executor.py`](https://github.com/inareshmatta/shivy-ai/main/backend/routers/tool_executor.py) — Tool execution · [`VoiceControls.jsx`](https://github.com/inareshmatta/shivy-ai/main/frontend/src/components/LeftPanel/VoiceControls.jsx) — Direct Gemini Live API connection · [`interactions.py`](https://github.com/inareshmatta/shivy-ai/main/backend/routers/interactions.py) — Agentic tool orchestration |
+| **Cloud Console** | [Cloud Run Dashboard](https://console.cloud.google.com/run/detail/us-central1/shivy-ai?project=klassroom-ai-backend) |
 
 ---
 

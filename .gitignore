@@ -18,3 +18,7 @@ Thumbs.db
 # Build output
 dist/
 build/
+
+# Sensitive Docs
+SHIVY_INSTRUCTIONS.md
+judge_access_instructions.doc

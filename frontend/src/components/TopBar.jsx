@@ -6,8 +6,8 @@ export default function TopBar({ books, session, theme, toggleTheme, onEndSessio
         <header className="topbar">
             <div className="topbar-left">
                 <span className="topbar-logo">
-                    <span className="topbar-logo-icon">📖</span>
-                    <span className="gradient-text">Klassbook AI</span>
+                    <span className="topbar-logo-icon">🤖</span>
+                    <span className="gradient-text">Shivy AI</span>
                 </span>
 
                 {bookCount > 0 && (

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import LeftPanel from './components/LeftPanel/LeftPanel'
 import CenterCanvas from './components/CenterCanvas/CenterCanvas'
+import ImageCanvas from './components/CenterCanvas/ImageCanvas'
 import RightPanel from './components/RightPanel/RightPanel'
 import VisualPanel from './components/VisualPanel/VisualPanel'
 import AssessmentPanel from './components/AssessmentPanel/AssessmentPanel'
@@ -12,10 +13,11 @@ import './App.css'
 
 export default function App() {
   // Theme state
-  const [theme, setTheme] = useState(() => localStorage.getItem('klassroom_theme') || 'light')
+  const [theme, setTheme] = useState(() => localStorage.getItem('shivy_theme') || 'light')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('shivy_theme', theme)
     localStorage.setItem('klassroom_theme', theme)
   }, [theme])
 
@@ -54,6 +56,10 @@ export default function App() {
 
   // Curriculum Planner state
   const [plannerOpen, setPlannerOpen] = useState(false)
+
+  // Discipline & Dictation
+  const [disciplineLogs, setDisciplineLogs] = useState([])
+  const [dictationWords, setDictationWords] = useState([])
 
   // Sidebar Toggle State
   const [leftPanelOpen, setLeftPanelOpen] = useState(true)
@@ -163,6 +169,10 @@ export default function App() {
         window.dispatchEvent(new CustomEvent('voice-lookup-word', {
           detail: { word: args?.word || '', definition: result?.definition || result }
         }))
+      } else if (tool === 'log_discipline') {
+        setDisciplineLogs(prev => [...prev.slice(-4), { ts: Date.now(), issue: args?.issue, note: args?.note }])
+      } else if (tool === 'save_dictation_words') {
+        setDictationWords(args?.words || [])
       }
     }
 
@@ -219,20 +229,35 @@ export default function App() {
           />
         </div>
 
-        <CenterCanvas
-          book={activeBook}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          session={session}
-          setSession={setSession}
-          pageAnalysis={pageAnalysis}
-          setPageAnalysis={setPageAnalysis}
-          settings={settings}
-          appendTranscript={appendTranscript}
-          onVisualRequest={onVisualGenerated}
-          onOpenVisualPanel={openVisualPanel}
-          transcript={transcript}
-        />
+        {activeBook?.mimeType?.includes('image/') ? (
+          <ImageCanvas
+            book={activeBook}
+            session={session}
+            setSession={setSession}
+            pageAnalysis={pageAnalysis}
+            setPageAnalysis={setPageAnalysis}
+            settings={settings}
+            appendTranscript={appendTranscript}
+            onVisualRequest={onVisualGenerated}
+            onOpenVisualPanel={openVisualPanel}
+            transcript={transcript}
+          />
+        ) : (
+          <CenterCanvas
+            book={activeBook}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            session={session}
+            setSession={setSession}
+            pageAnalysis={pageAnalysis}
+            setPageAnalysis={setPageAnalysis}
+            settings={settings}
+            appendTranscript={appendTranscript}
+            onVisualRequest={onVisualGenerated}
+            onOpenVisualPanel={openVisualPanel}
+            transcript={transcript}
+          />
+        )}
 
         {/* Right Toggle Button (desktop only) */}
         <button 
@@ -250,6 +275,8 @@ export default function App() {
             subject={activeBook?.subject || 'General'}
             appendTranscript={appendTranscript}
             onOpenAssessment={() => setAssessmentOpen(true)}
+            disciplineLogs={disciplineLogs}
+            dictationWords={dictationWords}
           />
         </div>
       </div>

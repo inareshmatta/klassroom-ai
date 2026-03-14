@@ -1,10 +1,10 @@
 @echo off
-title Klassbook AI
+title Shivy AI
 color 0A
 
 echo.
 echo  ========================================
-echo    Klassbook AI - Starting App
+echo    Shivy AI - Starting App
 echo  ========================================
 echo.
 
@@ -39,7 +39,7 @@ start http://localhost:8080
 echo [4/4] Starting backend server...
 echo.
 echo  ========================================
-echo    Klassbook AI is running!
+echo    Shivy AI is running!
 echo    Frontend ^& Backend: http://localhost:8080
 echo  ========================================
 echo.

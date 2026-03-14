@@ -9,9 +9,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from routers import live_session, vision, visual_gen, upload, quiz, bookmarks, ephemeral_token, interactions, curriculum, tool_executor
+from routers import auth, live_session, vision, visual_gen, upload, quiz, bookmarks, ephemeral_token, interactions, curriculum, tool_executor
 
-app = FastAPI(title="KlassroomAI Backend", version="1.0.0")
+app = FastAPI(title="Shivy AI Backend", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +22,7 @@ app.add_middleware(
 )
 
 # app.include_router(live_session.router)  # Disabled: using client-to-server now
+app.include_router(auth.router)
 app.include_router(vision.router)
 app.include_router(visual_gen.router)
 app.include_router(upload.router)
@@ -34,7 +35,7 @@ app.include_router(tool_executor.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "KlassroomAI"}
+    return {"status": "ok", "service": "Shivy AI"}
 
 # Serve the built React frontend from /static
 STATIC_DIR = Path(__file__).parent / "static"

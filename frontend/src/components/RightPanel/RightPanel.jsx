@@ -2,9 +2,43 @@ import { useState } from 'react'
 import KnowledgeVault from './KnowledgeVault'
 import './RightPanel.css'
 
-export default function RightPanel({ pageAnalysis, currentPage, subject, appendTranscript, onOpenAssessment }) {
+export default function RightPanel({ pageAnalysis, currentPage, subject, appendTranscript, onOpenAssessment, disciplineLogs = [], dictationWords = [] }) {
     return (
         <aside className="panel right-panel">
+            {/* Discipline & HW tracking */}
+            {(disciplineLogs.length > 0 || dictationWords.length > 0) && (
+                <div className="panel-card" style={{ order: -1 }}>
+                    <div className="section-header">
+                        <span className="section-header-icon">🚨</span>
+                        Session Activity
+                    </div>
+                    
+                    {disciplineLogs.length > 0 && (
+                        <div className="rp-insights" style={{ marginBottom: dictationWords.length ? 12 : 0 }}>
+                            <div className="text-xs text-muted mb-1">Discipline Flags</div>
+                            <div className="rp-concepts">
+                                {disciplineLogs.map((log, i) => (
+                                    <div key={i} className="tag tag-amber" style={{ display: 'block', width: '100%', marginBottom: 4 }}>
+                                        <strong>{new Date(log.ts).toLocaleTimeString()}:</strong> {log.issue} 
+                                        <div className="text-xxs opacity-75">{log.note}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {dictationWords.length > 0 && (
+                        <div className="rp-insights">
+                            <div className="text-xs text-muted mb-1">Dictation Assignment</div>
+                            <div className="rp-concepts">
+                                {dictationWords.map((word, i) => (
+                                    <span key={i} className="tag tag-ghost">{word}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
             {/* Quick quiz summary */}
             <div className="panel-card">
                 <div className="section-header">

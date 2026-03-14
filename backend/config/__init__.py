@@ -15,7 +15,7 @@ IMAGE_MODEL = "gemini-3.1-flash-image-preview"
 
 # ── Live / Voice (Native Audio) ──────────────────────────────────
 # Real-time bidirectional audio streaming for the voice tutor
-LIVE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
+LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
 
 # ── Vision / Page Analysis ────────────────────────────────────────
 # For analyzing uploaded textbook pages (images)

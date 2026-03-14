@@ -5,8 +5,7 @@ import './VoiceControls.css'
 const SEND_SAMPLE_RATE = 16000
 const RECV_SAMPLE_RATE = 24000
 const CHUNK_SIZE = 1024
-const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025'
-
+const LIVE_MODEL = 'gemini-live-2.5-flash-native-audio'
 export default function VoiceControls({
     session, setSession, settings, setSettings,
     book, pageAnalysis, appendTranscript, currentPage,
@@ -22,6 +21,8 @@ export default function VoiceControls({
     const animFrameRef = useRef(null)
     const isInterruptedRef = useRef(false)
     const streamRef = useRef(null)
+    const videoRef = useRef(null)             // Hidden video element for webcam
+    const visionIntervalRef = useRef(null)    // Interval for sending webcam frames
 
     // Refs for volatile state
     const settingsRef = useRef(settings)
@@ -124,7 +125,7 @@ export default function VoiceControls({
         const voice = settingsRef.current.voice
         const pageText = pageAnalysisRef.current?.full_text?.slice(0, 2000) || ''
 
-        const systemInstruction = `You are Klassbook AI, an expert ${subject} tutor for High School students.
+        const systemInstruction = `You are Shivy AI, an expert ${subject} tutor for High School students. Your tagline is "The Future of School, Powered by AI".
 You MUST ALWAYS speak in English by default. 
 DO NOT switch languages or accents unless the user explicitly asks you to (e.g., "Speak in Spanish" or "Can we practice French?"). Even if the user says a single word in another language by accident, remain in English unless formally requested to switch.
 
@@ -146,7 +147,34 @@ CRITICAL INSTRUCTIONS:
 - When asked what to study next, you MUST call 'suggest_next_topic'.
 - NEVER tell the user to click a button or use a tool manually. ALWAYS execute the tool call yourself!
 - When discussing complex topics, proactively generate diagrams using 'generate_visual'.
-- Do NOT just talk about these things; actually execute the tool call!
+
+DISCIPLINE & BEHAVIOR TRACKING (VIA WEBCAM VISION):
+- You are continuously receiving webcam frames of the student.
+- IMPORTANT: Looking down at a book or paper is NORMAL behavior (the student is reading or writing). Do NOT flag that as sleeping or tired!
+- Only flag 'sleeping' if the student's eyes are CLOSED and there is NO hand/arm movement for a prolonged period (head resting on desk, completely still).
+- If the webcam feed suddenly goes completely BLACK or shows a covered/turned-off camera, you MUST verbally nudge the student: "Hey, it looks like your camera turned off. Can you turn it back on so I can help you better?" and ALSO call 'log_discipline' with issue="camera_off".
+- When calling 'log_discipline', always include a clear timestamp-style note (e.g. "Camera went dark at 12:35 PM" or "Student appeared asleep, no movement for 30 seconds").
+- Do NOT be overly aggressive. Only flag genuine issues, not normal studying postures.
+
+DICTATION HOMEWORK:
+- When the student asks for a dictation exercise, FIRST ask them: "How many words would you like me to dictate? 2, 3, or 5?"
+- Wait for the student to answer. Then select that many vocabulary words from the *current page text*.
+- CRITICAL: Do NOT call 'save_dictation_words' until you have FINISHED reviewing their spelling! Calling it early reveals the answers!
+- Tell the student to grab a pen and paper. 
+- Dictate the words ONE BY ONE slowly. Repeat each word twice, sounding it out (e.g. "Pro... cras... ti... na... tion"). After each word, ask: "Say 'Next' when you have written it down." WAIT for them to respond before moving to the next word.
+- After ALL words are dictated, ask the student to hold their paper up to the camera so you can verify their spelling.
+- Look at the webcam feed, check each word's spelling, and give specific feedback (e.g. "Great job on 'tokenizer'! But 'segmentation' is missing the second 'e'.")
+- ONLY AFTER you have reviewed ALL spellings and given corrections, call 'save_dictation_words' with the words to log the completed exercise in the UI.
+
+GUIDED READING:
+- The student can activate guided reading by voice (e.g. "Read this page to me", "Start guided reading", "Read along with me") OR by clicking the Guided Reading button.
+- Read the text paragraph by paragraph. After each paragraph, pause and offer the student choices:
+  "Would you like to: practice dictation on words from this paragraph, take a quick assessment, or need help understanding any word? Just say 'Next' to continue reading."
+- If the student says "dictation" → start the DICTATION HOMEWORK flow using words from that paragraph.
+- If the student says "assessment" or "quiz" → you MUST call the tool generate_quiz(topic="<paragraph topic>", num_questions=3, quiz_type="mcq"). Do NOT just talk about a quiz, actually execute the function call!
+- If the student asks about a specific word → you MUST call the tool lookup_word(word="<the word>", subject="${subject}"). Do NOT just define it verbally, execute the function call!
+- If the student says "next" or "continue" → move to the next paragraph.
+
 - IMPORTANT: Before or while calling a tool, ALWAYS give a short verbal confirmation like "Sure, let me generate that quiz for you" or "Let me draw that up" so there is no dead air.
 - Be conversational, use the student's name if they give it, and make learning fun!
 `
@@ -162,6 +190,8 @@ CRITICAL INSTRUCTIONS:
                 { name: "explain_like_im_5", description: "Simplify a complex concept for a 5-year-old", parameters: { type: "OBJECT", properties: { concept: { type: "STRING" } }, required: ["concept"] } },
                 { name: "compare_concepts", description: "Compare two concepts side-by-side", parameters: { type: "OBJECT", properties: { concept_a: { type: "STRING" }, concept_b: { type: "STRING" } }, required: ["concept_a", "concept_b"] } },
                 { name: "generate_flashcards", description: "Generate revision flashcards or shorts on a topic. Call this immediately when the user asks for flashcards or shorts.", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, num_cards: { type: "INTEGER" } }, required: ["topic"] } },
+                { name: "log_discipline", description: "Log a disciplinary issue based on webcam visual feed (e.g., student is sleeping or camera is off).", parameters: { type: "OBJECT", properties: { issue: { type: "STRING", description: "sleeping, camera_off, distracted, using_phone" }, severity: { type: "INTEGER", description: "1 to 5 scale" }, note: { type: "STRING", description: "Description of what you see" } }, required: ["issue", "severity", "note"] } },
+                { name: "save_dictation_words", description: "Save the list of words you are about to dictate to the student so they appear in the UI.", parameters: { type: "OBJECT", properties: { words: { type: "ARRAY", items: { type: "STRING" }, description: "Array of words for dictation" } }, required: ["words"] } },
             ]
         }]
 
@@ -241,62 +271,64 @@ CRITICAL INSTRUCTIONS:
                                 // Execute tools in the background — do NOT block the message handler
                                 // This prevents audio lag while tools are being fetched
                                 const gs = sessionRef.current
-                                ;(async () => {
-                                    const functionResponses = []
-                                    for (const fc of functionCalls) {
-                                        const toolEmoji = {
-                                            generate_quiz: '📝', lookup_word: '📖',
-                                            generate_visual: '🎨', create_bookmark: '🔖',
-                                            suggest_next_topic: '📚', generate_flashcards: '📇',
-                                        }[fc.name] || '🔧'
+                                    ; (async () => {
+                                        const functionResponses = []
+                                        for (const fc of functionCalls) {
+                                            const toolEmoji = {
+                                                generate_quiz: '📝', lookup_word: '📖',
+                                                generate_visual: '🎨', create_bookmark: '🔖',
+                                                suggest_next_topic: '📚', generate_flashcards: '📇',
+                                                log_discipline: '🚨', save_dictation_words: '✍️',
+                                            }[fc.name] || '🔧'
 
-                                        const toolFriendlyName = {
-                                            generate_quiz: 'Quiz', lookup_word: 'Definition',
-                                            generate_visual: 'Visual Diagram', create_bookmark: 'Note in Knowledge Vault',
-                                            generate_flashcards: 'Flashcards',
-                                        }[fc.name] || 'Content'
+                                            const toolFriendlyName = {
+                                                generate_quiz: 'Quiz', lookup_word: 'Definition',
+                                                generate_visual: 'Visual Diagram', create_bookmark: 'Note in Knowledge Vault',
+                                                generate_flashcards: 'Flashcards', log_discipline: 'Logging Behavior',
+                                                save_dictation_words: 'Preparing Dictation',
+                                            }[fc.name] || 'Content'
 
-                                        appendTranscript('agent', `${toolEmoji} Agent is generating: ${toolFriendlyName}...`)
+                                            appendTranscript('agent', `${toolEmoji} Agent is generating: ${toolFriendlyName}...`)
 
-                                        // Dispatch start event for UI loading indicators
-                                        window.dispatchEvent(new CustomEvent('agent-tool-start', {
-                                            detail: { tool: fc.name, args: fc.args }
-                                        }))
+                                            // Dispatch start event for UI loading indicators
+                                            window.dispatchEvent(new CustomEvent('agent-tool-start', {
+                                                detail: { tool: fc.name, args: fc.args }
+                                            }))
 
-                                        // Execute tool on backend (API key stays server-side)
-                                        let toolResult = { error: 'Tool execution failed' }
-                                        try {
-                                            const res = await fetch('/api/execute-tool', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ tool: fc.name, args: fc.args }),
-                                            })
-                                            if (res.ok) {
-                                                toolResult = await res.json()
+                                            // Execute tool on backend (API key stays server-side)
+                                            let toolResult = { error: 'Tool execution failed' }
+                                            try {
+                                                const res = await fetch('/api/execute-tool', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ tool: fc.name, args: fc.args }),
+                                                })
+                                                if (res.ok) {
+                                                    toolResult = await res.json()
+                                                }
+                                            } catch (e) {
+                                                console.error('[LIVE] Tool execution error:', e)
                                             }
-                                        } catch (e) {
-                                            console.error('[LIVE] Tool execution error:', e)
+
+                                            // Dispatch the full rich data to the frontend UI so it can render the component
+                                            window.dispatchEvent(new CustomEvent('agent-tool-result', {
+                                                detail: { tool: fc.name, args: fc.args, result: toolResult }
+                                            }))
+
+                                            // Send a simplified status back to Gemini so it doesn't try to read the whole quiz/image aloud verbally
+                                            functionResponses.push({
+                                                id: fc.id,
+                                                name: fc.name,
+                                                response: {
+                                                    result: "Success. The tool result is now visible on the user's screen.",
+                                                    instruction: "Acknowledge briefly, but DO NOT read the quiz questions, image descriptions, or flashcards aloud."
+                                                },
+                                            })
                                         }
 
-                                        // Dispatch the full rich data to the frontend UI so it can render the component
-                                        window.dispatchEvent(new CustomEvent('agent-tool-result', {
-                                            detail: { tool: fc.name, args: fc.args, result: toolResult }
-                                        }))
-
-                                        // Send a simplified status back to Gemini so it doesn't try to read the whole quiz/image aloud verbally
-                                        functionResponses.push({
-                                            id: fc.id,
-                                            name: fc.name,
-                                            response: {
-                                                result: "Success. The tool result is now visible on the user's screen.",
-                                                instruction: "Acknowledge briefly, but DO NOT read the quiz questions, image descriptions, or flashcards aloud."
-                                            },
-                                        })
-                                    }
-
-                                    // Send tool results back to Gemini
-                                    if (gs) gs.sendToolResponse({ functionResponses })
-                                })()
+                                        // Send tool results back to Gemini
+                                        if (gs) gs.sendToolResponse({ functionResponses })
+                                    })()
                             }
                         } catch (err) {
                             console.error('[LIVE] Message handling error:', err)
@@ -336,18 +368,42 @@ CRITICAL INSTRUCTIONS:
             // Send a short greeting utilizing the JS SDK `sendClientContent` method explicitly
             geminiSession.sendClientContent({ turns: "Hi! I just opened my textbook. I'm ready to learn — introduce yourself briefly and ask what I need help with.", turnComplete: true })
 
-            // 3. Setup mic without forcing strict sampleRate, AudioContext resamples automatically
+            // 3. Setup mic & webcam
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true }
+                audio: { echoCancellation: true, noiseSuppression: true },
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
             })
             streamRef.current = stream
+
+            // Attach video stream to the React video ref
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream
+                videoRef.current.play().catch(e => console.warn('Video play prevented:', e))
+            }
+
+            // Start continuous vision loop (every 10 seconds to avoid overloading session)
+            visionIntervalRef.current = setInterval(() => {
+                if (!sessionRef.current || !videoRef.current) return
+                if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && videoRef.current.videoWidth > 0) {
+                    try {
+                        const canvas = document.createElement('canvas')
+                        canvas.width = videoRef.current.videoWidth
+                        canvas.height = videoRef.current.videoHeight
+                        const ctx = canvas.getContext('2d')
+                        ctx.drawImage(videoRef.current, 0, 0)
+                        const base64 = canvas.toDataURL('image/jpeg', 0.4).split(',')[1]
+                        sessionRef.current.sendRealtimeInput({ video: { mimeType: 'image/jpeg', data: base64 } })
+                    } catch (e) { console.warn('[LIVE] Webcam frame failed:', e) }
+                }
+            }, 6000)
+
             audioCtxRef.current = new AudioContext({ sampleRate: SEND_SAMPLE_RATE })
             await audioCtxRef.current.resume()
             playbackCtxRef.current = new AudioContext({ sampleRate: RECV_SAMPLE_RATE })
             await playbackCtxRef.current.resume()
 
             startMeter(stream)
-            const src = audioCtxRef.current.createMediaStreamSource(stream)
+            const src = audioCtxRef.current.createMediaStreamSource(new MediaStream(stream.getAudioTracks()))
             const proc = audioCtxRef.current.createScriptProcessor(CHUNK_SIZE, 1, 1)
             processorRef.current = proc
 
@@ -361,7 +417,7 @@ CRITICAL INSTRUCTIONS:
 
                 // Faster Base64 conversion for PCM chunks
                 const bytes = new Uint8Array(i16.buffer)
-                
+
                 // Chunk the string creation to avoid max stack size exceeded errors if chunks were larger,
                 // but at 1024, apply works well.
                 const binary = String.fromCharCode.apply(null, bytes)
@@ -393,6 +449,7 @@ CRITICAL INSTRUCTIONS:
         audioCtxRef.current?.close()
         playbackCtxRef.current?.close()
         cancelAnimationFrame(animFrameRef.current)
+        clearInterval(visionIntervalRef.current)
         setSession(s => ({ ...s, isLive: false, orbState: 'idle' }))
         setMicLevel(0)
     }, [setSession])
@@ -447,6 +504,19 @@ CRITICAL INSTRUCTIONS:
         }
     }, [session.isLive, appendTranscript])
 
+    useEffect(() => {
+        const handleTriggerMsg = (e) => {
+            const msg = e.detail
+            if (sessionRef.current && session.isLive && msg) {
+                try {
+                    sessionRef.current.sendClientContent({ turns: msg, turnComplete: true })
+                } catch (err) { console.warn('[LIVE] Failed to trigger client msg:', err) }
+            }
+        }
+        window.addEventListener('trigger-client-message', handleTriggerMsg)
+        return () => window.removeEventListener('trigger-client-message', handleTriggerMsg)
+    }, [session.isLive])
+
     return (
         <div className="voice-controls">
             <div className="vc-row">
@@ -460,6 +530,19 @@ CRITICAL INSTRUCTIONS:
                     </button>
                 )}
             </div>
+
+            {session.isLive && (
+                <div className="vc-webcam-preview">
+                    <span className="text-xs text-muted mb-1 block" style={{marginBottom: '4px'}}>Webcam Source (Agent Vision)</span>
+                    <video 
+                        ref={videoRef} 
+                        autoPlay 
+                        playsInline 
+                        muted 
+                        style={{ width: '100%', borderRadius: 'var(--radius)', background: '#000', maxHeight: '160px', objectFit: 'cover' }}
+                    />
+                </div>
+            )}
 
             <div className="vc-meter-row">
                 <span className="text-xs text-muted">🎤 Mic</span>

@@ -14,7 +14,7 @@ async def test():
     client = genai.Client(api_key=api_key)
     
     # Recreate EXACTLY the same config as live_session.py
-    system_prompt = "You are KlassroomAI, an expert tutor. Be friendly and helpful."
+    system_prompt = "You are Shivy AI, an expert tutor. Be friendly and helpful."
     
     # Simple tool declaration
     tools = [{

@@ -1,10 +1,10 @@
 @echo off
 setlocal
 
-:: Deployment script for KlassroomAI to Google Cloud Run
+:: Deployment script for Shivy AI to Google Cloud Run
 
 echo ========================================
-echo   Deploying KlassroomAI to Cloud Run
+echo   Deploying Shivy AI to Cloud Run
 echo ========================================
 echo.
 
@@ -29,7 +29,7 @@ cd /d "%~dp0backend"
 
 :: Set your GCP Project ID here
 set GCP_PROJECT_ID=klassroom-ai-backend
-set SERVICE_NAME=klassroom-api
+set SERVICE_NAME=shivy-ai
 set REGION=us-central1
 
 echo Project: %GCP_PROJECT_ID%

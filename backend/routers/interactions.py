@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api")
 # Production: store in Firestore
 _session_interactions: dict[str, str] = {}
 
-ORCHESTRATOR_SYSTEM = """You are Klassbook AI's session orchestrator.
+ORCHESTRATOR_SYSTEM = """You are Shivy AI's session orchestrator.
 You manage the study session by:
 1. Analyzing uploaded textbook content
 2. Maintaining context across the entire session

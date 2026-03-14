@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Deployment script for Klassbook AI to Google Cloud Run
+# Deployment script for Shivy AI to Google Cloud Run
 
 echo "========================================"
 echo "  Deploying Klassbook AI to Cloud Run"
@@ -29,7 +29,7 @@ cd ../backend
 
 # Set your GCP Project ID here
 GCP_PROJECT_ID="klassroom-ai-backend"
-SERVICE_NAME="klassroom-api"
+SERVICE_NAME="shivy-ai"
 REGION="us-central1"
 
 echo "Project: $GCP_PROJECT_ID"

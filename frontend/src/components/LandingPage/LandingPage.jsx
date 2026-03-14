@@ -7,10 +7,22 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
     const [accessError, setAccessError] = useState(false);
     const heroInputRef = useRef(null);
 
-    const handleAccessSubmit = () => {
-        if (accessCode.trim().toUpperCase() === 'GEMINI-LIVE-AGENT-26-MATTA') {
-            onEnter();
-        } else {
+    const handleAccessSubmit = async () => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_code: accessCode })
+            });
+
+            if (response.ok) {
+                onEnter();
+            } else {
+                setAccessError(true);
+                setTimeout(() => setAccessError(false), 2000);
+            }
+        } catch (error) {
+            console.error('Auth error:', error);
             setAccessError(true);
             setTimeout(() => setAccessError(false), 2000);
         }
@@ -28,8 +40,8 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
             {/* Navigation Header */}
             <header className="landing-nav">
                 <div className="nav-logo">
-                    <span className="nav-icon">📚</span>
-                    <span className="nav-title">Klassbook AI</span>
+                    <span className="nav-icon">🤖</span>
+                    <span className="nav-title">Shivy AI</span>
                 </div>
                 <div className="nav-actions">
                     <button className="btn-icon btn-ghost" onClick={toggleTheme} title="Toggle Theme" style={{ marginRight: 12 }}>
@@ -51,12 +63,12 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                         transition={{ duration: 0.8 }}
                     >
                         <h1 className="hero-headline">
-                            Master Any Subject with Your <br />
-                            <span className="text-gradient">Personal AI Tutor</span>
+                            The Future of School, <br />
+                            <span className="text-gradient">Powered by AI</span>
                         </h1>
                         <p className="hero-subheadline">
-                            Upload textbooks, practice with interactive quizzes, and talk naturally to your tutor.
-                            Experience customized learning designed to help you achieve perfect grades.
+                            Upload textbooks, practice with interactive quizzes, and talk naturally to Shivy AI.
+                            Experience a truly personalized tutor that simplifies complex learning.
                         </p>
                         <div className="access-container">
                             <div className="access-input-group">
@@ -96,7 +108,7 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                                 <i className="dot yellow"></i>
                                 <i className="dot green"></i>
                             </div>
-                            <img src="/assets/main_app.png" alt="Klassbook AI Main Interface" className="mockup-img" />
+                            <img src="/assets/shivy_ai.png" alt="Shivy AI Interface" className="mockup-img" />
                         </div>
                     </motion.div>
                 </section>
@@ -112,7 +124,7 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                             viewport={{ once: true, margin: "-100px" }}
                         >
                             <div className="feature-badge">🗣️ Real-time Voice</div>
-                            <h2>Conversational AI Tutor</h2>
+                            <h2>Meet Shivy AI Tutor</h2>
                             <p>
                                 Practice with natural, back-and-forth conversations in English, Spanish, German, Hindi, Urdu, and Arabic.
                                 The Voice Tutor actively listens, understands your context from the textbook, and guides you through complex topics.
@@ -169,7 +181,7 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                             <div className="feature-badge">📝 Test Your Knowledge</div>
                             <h2>Targeted Smart Assessments</h2>
                             <p>
-                                Don't just read—test your understanding instantly. Klassbook AI generates custom quizzes and revision flashcards
+                                Don't just read—test your understanding instantly. Shivy AI generates custom quizzes and revision flashcards
                                 based exactly on the specific textbook pages and topics you are currently studying.
                             </p>
                         </motion.div>
@@ -195,7 +207,7 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
                         viewport={{ once: true }}
                     >
                         <h2>Ready to boost your grades?</h2>
-                        <p>Join thousands of students learning smarter with Klassbook AI.</p>
+                        <p>Join thousands of students learning smarter with Shivy AI.</p>
                         <div className="access-container" style={{ marginTop: '25px' }}>
                             <div className="access-input-group">
                                 <input 
@@ -221,10 +233,10 @@ export default function LandingPage({ onEnter, theme, toggleTheme }) {
             <footer className="landing-footer">
                 <div className="footer-content">
                     <div className="footer-logo">
-                        <span>📚 Klassbook AI</span>
+                        <span>🤖 Shivy AI</span>
                     </div>
                     <div className="footer-links">
-                        <span>© 2026 Klassbook AI</span>
+                        <span>© 2026 Shivy AI</span>
                     </div>
                 </div>
             </footer>

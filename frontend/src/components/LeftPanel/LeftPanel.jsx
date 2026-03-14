@@ -75,6 +75,28 @@ export default function LeftPanel({
                         onClick={() => onOpenVisualPanel()}>
                         🎨 Visual Explainer
                     </button>
+                    {session.isLive && (
+                        <>
+                            <button className="btn btn-ghost w-full text-sm"
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('trigger-client-message', {
+                                        detail: "Let's do a dictation exercise based on this page."
+                                    }))
+                                    appendTranscript('user', "📝 Let's do a dictation exercise.")
+                                }}>
+                                📝 Start Dictation
+                            </button>
+                            <button className="btn btn-ghost w-full text-sm"
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('trigger-client-message', {
+                                        detail: "Please start guided reading for this page. Read it paragraph by paragraph and ask if I need help after each."
+                                    }))
+                                    appendTranscript('user', "📖 Please start guided reading.")
+                                }}>
+                                📖 Guided Reading
+                            </button>
+                        </>
+                    )}
                     <button id="btn-launch-assessment" className="btn btn-secondary w-full"
                         onClick={onOpenAssessment}>
                         📝 Assessment Center
