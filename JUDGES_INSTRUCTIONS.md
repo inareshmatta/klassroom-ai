@@ -9,9 +9,9 @@ This document provides a comprehensive, step-by-step guide for testing the advan
 ---
 
 ## 🚀 Quick Access
-- **Live Demo:** [https://shivy-ai-kygarr5jkq-uc.a.run.app](https://shivy-ai-kygarr5jkq-uc.a.run.app)
+- **Live Demo:** [https://shivy-ai-513107347048.us-central1.run.app/](https://shivy-ai-513107347048.us-central1.run.app/)
 - **Architecture Diagram:** [README.md#system-architecture](./README.md#system-architecture)
-- **Health Check:** [/health](https://shivy-ai-kygarr5jkq-uc.a.run.app/health)
+- **Health Check:** [/health](https://shivy-ai-513107347048.us-central1.run.app/health)
 
 ---
 
@@ -20,7 +20,7 @@ This document provides a comprehensive, step-by-step guide for testing the advan
 Follow these steps to experience the full power of Shivy AI's agentic multimodal engine.
 
 ### Step 1: Initialize the Environment
-1.  Open the [Live Demo](https://shivy-ai-kygarr5jkq-uc.a.run.app).
+1.  Open the [Live Demo](https://shivy-ai-513107347048.us-central1.run.app/).
 2.  **Upload a PDF:** Drag and drop any textbook PDF into the left sidebar.
 3.  **Wait for Analysis:** You will see a "Page Analysis Complete" system message in the right panel.
 
